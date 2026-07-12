@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="116" fill="#0f5b66"/>
+  <path d="M98 158c30-38 76-60 130-60 93 0 164 70 164 160 0 92-72 164-166 164-52 0-98-21-128-56l47-43c20 23 49 36 82 36 58 0 101-44 101-101 0-55-43-97-100-97-34 0-64 14-83 39l45 1v55H94V158h4Z" fill="#fff"/>
+  <text x="256" y="286" text-anchor="middle" font-family="Arial, sans-serif" font-size="78" font-weight="800" fill="#fff">1G1A</text>
+</svg>

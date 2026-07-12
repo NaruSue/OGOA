@@ -121,6 +121,7 @@
     form.append('_csrf', draft.csrf || '');
     form.append('profile_id', String(draft.profile_id));
     form.append('body', draft.body || '');
+    form.append('expires_in', draft.expires_in || '24h');
     form.append('public_token', draft.public_token);
     form.append('status', 'ready');
     if (draft.reserve_token) {
@@ -186,6 +187,7 @@
     const profileSelect = document.getElementById('profile-select');
     const bodyInput = document.getElementById('share-body');
     const photosInput = document.getElementById('share-photos');
+    const expiresInput = document.getElementById('share-expires');
     const status = document.getElementById('draft-status');
     const csrf = form.querySelector('input[name="_csrf"]')?.value || '';
 
@@ -221,6 +223,7 @@
         public_token: publicToken,
         profile_id: Number(profileId),
         body: bodyInput ? bodyInput.value : '',
+        expires_in: expiresInput ? expiresInput.value : '24h',
         reserve_token: reserveToken,
         csrf,
         photos: files,
@@ -259,6 +262,10 @@
   }
 
   async function handleQrPage() {
+    if (!window.__QR_LOCATION_CAPTURE) {
+      return;
+    }
+
     const eventId = window.__QR_EVENT_ID;
     if (!eventId || !navigator.geolocation) {
       return;
@@ -288,9 +295,40 @@
     handleDashboard();
     handleQrPage();
     syncPending();
+    handlePwaInstall();
   });
 
   window.addEventListener('online', () => {
     syncPending();
   });
+
+  let deferredInstallPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    document.querySelectorAll('[data-pwa-install]').forEach((button) => {
+      button.hidden = false;
+    });
+  });
+
+  function handlePwaInstall() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('service worker registration failed', err);
+      });
+    }
+
+    document.querySelectorAll('[data-pwa-install]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) {
+          return;
+        }
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice.catch(() => undefined);
+        deferredInstallPrompt = null;
+        button.hidden = true;
+      });
+    });
+  }
 })();

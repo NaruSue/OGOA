@@ -178,6 +178,29 @@ p:last-child { margin-bottom: 0; }
 .panel { padding: 18px; }
 .panel ul, .plain-list { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.8; }
 
+.step-accordion {
+  display: grid;
+  gap: 10px;
+}
+
+.step-accordion details {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(31, 26, 23, 0.08);
+}
+
+.step-accordion summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.step-accordion p {
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
 .dashboard-top {
   display: grid;
   gap: 18px;
@@ -187,6 +210,8 @@ p:last-child { margin-bottom: 0; }
 
 .form { display: grid; gap: 14px; }
 .form label { display: grid; gap: 8px; font-weight: 600; }
+.form-block { display: grid; gap: 14px; padding: 16px; border-radius: 20px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(31, 26, 23, 0.08); }
+.link-row { display: grid; gap: 12px; padding: 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.75); border: 1px solid rgba(31, 26, 23, 0.08); }
 .form input, .form textarea, .form select {
   width: 100%;
   border-radius: 14px;
@@ -205,7 +230,30 @@ p:last-child { margin-bottom: 0; }
   gap: 8px;
 }
 
-.launch-card { display: grid; gap: 16px; }
+.launch-section {
+  margin-bottom: 18px;
+}
+.launch-card { display: grid; gap: 12px; }
+.launch-card .form {
+  gap: 10px;
+}
+.launch-card textarea {
+  min-height: 86px;
+}
+.help-accordion {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.help-accordion summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 700;
+}
+.help-accordion p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
 .publish-steps {
   display: grid;
   gap: 12px;
@@ -314,30 +362,42 @@ p:last-child { margin-bottom: 0; }
 
 .qr-card {
   display: grid;
-  gap: 16px;
+  gap: 10px;
   justify-items: center;
   text-align: center;
 }
+.qr-card h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 8vw, 2.4rem);
+}
 .qr-copy {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 .qr-copy p {
   margin: 0;
-  max-width: 48ch;
+  max-width: 42ch;
+  line-height: 1.55;
 }
 .qr-frame {
   width: fit-content;
-  padding: 18px;
-  border-radius: 28px;
+  padding: 10px;
+  border-radius: 18px;
   background: #fff;
   border: 1px solid var(--line);
 }
 .qr-frame img {
   display: block;
-  width: 320px;
-  height: 320px;
-  max-width: min(72vw, 320px);
+  width: 160px;
+  height: 160px;
+  max-width: min(48vw, 160px);
+}
+.qr-message {
+  color: #1d35ff;
+  line-height: 1.7;
+}
+.qr-message p {
+  margin: 0;
 }
 .qr-url {
   display: grid;
@@ -368,6 +428,60 @@ p:last-child { margin-bottom: 0; }
 .guest-card {
   display: grid;
   gap: 12px;
+}
+
+.guest-footer {
+  display: flex;
+  justify-content: center;
+  margin: 14px 0 4px;
+}
+
+.guest-app-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.guest-app-link:hover {
+  text-decoration: none;
+}
+
+.guest-app-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #123d77);
+  color: #fff;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.pwa-install-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 12px auto 18px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.pwa-install-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pwa-install-card [hidden] {
+  display: none !important;
 }
 
 .hero-profile {
@@ -459,4 +573,89 @@ p:last-child { margin-bottom: 0; }
   .list-meta { justify-items: start; }
   .photo-grid { grid-template-columns: 1fr; }
   .small-grid { grid-template-columns: 1fr; }
+  .shell {
+    width: min(100vw - 16px, 1120px);
+    padding-top: 8px;
+  }
+  .topbar {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 18px;
+    gap: 8px;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    font-size: 0.82rem;
+  }
+  .brand-text {
+    display: none;
+  }
+  .nav {
+    gap: 10px;
+    font-size: 0.9rem;
+  }
+  .user-chip {
+    padding: 7px 10px;
+    font-size: 0.86rem;
+  }
+  .hero-copy, .hero-card, .section-card, .card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+  .launch-card {
+    gap: 8px;
+  }
+  .launch-card .form,
+  .form {
+    gap: 8px;
+  }
+  .launch-card textarea {
+    min-height: 66px;
+    max-height: 82px;
+  }
+  .upload-note,
+  .draft-banner {
+    display: none;
+  }
+  .launch-actions {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .launch-actions .button {
+    flex: 1;
+    min-height: 42px;
+    padding: 0 10px;
+  }
+  input, select, textarea {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+  label {
+    gap: 5px;
+    font-size: 0.92rem;
+  }
+  .qr-card {
+    gap: 7px;
+  }
+  .qr-card h1 {
+    font-size: 1.55rem;
+  }
+  .qr-frame {
+    padding: 8px;
+    border-radius: 16px;
+  }
+  .qr-frame img {
+    width: 126px;
+    height: 126px;
+    max-width: 42vw;
+  }
+  .qr-message {
+    font-size: 0.95rem;
+  }
+  .qr-copy p {
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
 }

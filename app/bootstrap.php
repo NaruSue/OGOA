@@ -585,6 +585,10 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
     if (!in_array($status, ['pending', 'ready'], true)) {
         $status = 'ready';
     }
+    $expiresIn = (string) ($payload['expires_in'] ?? '24h');
+    if (!in_array($expiresIn, ['24h', '3d', '7d', '30d'], true)) {
+        $expiresIn = '24h';
+    }
 
     $latitude = $payload['latitude'] ?? null;
     $longitude = $payload['longitude'] ?? null;
@@ -601,6 +605,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
              SET profile_id = :profile_id,
                  body = :body,
                  status = :status,
+                 expires_in = :expires_in,
                  latitude = :latitude,
                  longitude = :longitude,
                  location_accuracy_m = :accuracy,
@@ -613,6 +618,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
             'profile_id' => $profileId,
             'body' => $body,
             'status' => $status,
+            'expires_in' => $expiresIn,
             'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
             'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
             'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,
@@ -625,8 +631,8 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
         }
     } else {
         $stmt = $db->prepare(
-            'INSERT INTO share_events (profile_id, public_token, body, status, latitude, longitude, location_accuracy_m, location_captured_at)
-             VALUES (:profile_id, :public_token, :body, :status, :latitude, :longitude, :accuracy, :captured_at)
+            'INSERT INTO share_events (profile_id, public_token, body, status, expires_in, latitude, longitude, location_accuracy_m, location_captured_at)
+             VALUES (:profile_id, :public_token, :body, :status, :expires_in, :latitude, :longitude, :accuracy, :captured_at)
              RETURNING *'
         );
         $stmt->execute([
@@ -634,6 +640,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
             'public_token' => $token,
             'body' => $body,
             'status' => $status,
+            'expires_in' => $expiresIn,
             'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
             'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
             'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,
@@ -819,6 +826,47 @@ function app_log_share_access(PDO $db, int $eventId, int $profileId, ?string $vi
     ]);
 }
 
+function app_share_event_expiration_interval(string $expiresIn): string
+{
+    return match ($expiresIn) {
+        '3d' => '3 days',
+        '7d' => '7 days',
+        '30d' => '30 days',
+        default => '24 hours',
+    };
+}
+
+function app_touch_share_event_first_access(PDO $db, int $eventId): ?array
+{
+    $stmt = $db->prepare(
+        "UPDATE share_events
+         SET first_accessed_at = COALESCE(first_accessed_at, CURRENT_TIMESTAMP),
+             expires_at = COALESCE(expires_at, CURRENT_TIMESTAMP + ((CASE expires_in
+                 WHEN '3d' THEN '3 days'
+                 WHEN '7d' THEN '7 days'
+                 WHEN '30d' THEN '30 days'
+                 ELSE '24 hours'
+             END)::interval)),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = :id
+         RETURNING *"
+    );
+    $stmt->execute(['id' => $eventId]);
+    $event = $stmt->fetch();
+
+    return $event ?: null;
+}
+
+function app_share_event_expired(array $event): bool
+{
+    $expiresAt = $event['expires_at'] ?? null;
+    if (!is_string($expiresAt) || $expiresAt === '') {
+        return false;
+    }
+
+    return strtotime($expiresAt) !== false && strtotime($expiresAt) < time();
+}
+
 function app_save_share_location(PDO $db, int $eventId, float $latitude, float $longitude, ?float $accuracy): void
 {
     $stmt = $db->prepare(
@@ -854,6 +902,8 @@ function app_render(string $title, string $body, array $context = []): void
     $flash = app_flash();
     $user = $context['user'] ?? null;
     $meta = $context['meta'] ?? '';
+    $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
+    $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
 
     header('Content-Type: text/html; charset=UTF-8');
     echo '<!doctype html><html lang="ja"><head><meta charset="utf-8">';
@@ -866,22 +916,30 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<link rel="preconnect" href="https://fonts.googleapis.com">';
     echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
     echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">';
+    echo '<link rel="manifest" href="' . app_h(app_url('/manifest.webmanifest')) . '">';
+    echo '<meta name="theme-color" content="#0f5b66">';
     echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css')) . '">';
     echo '<script defer src="' . app_h(app_url('/assets/app.js')) . '"></script>';
     echo '</head><body>';
     echo '<div class="shell">';
-    echo '<header class="topbar">';
-    echo '<a class="brand" href="' . app_h(app_url('/')) . '"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span></a>';
-    echo '<nav class="nav">';
-    echo '<a href="' . app_h(app_url('/')) . '">Home</a>';
-    echo '<a href="' . app_h(app_url('/dashboard')) . '">Dashboard</a>';
-    echo '<a href="' . app_h(app_url('/login')) . '">Login</a>';
-    echo '</nav>';
-    if ($user) {
-        echo '<div class="user-chip">' . app_h((string) ($user['account_display_name'] ?? $user['name'] ?? 'User')) . '</div>';
+    if ($chrome) {
+        echo '<header class="topbar">';
+        echo '<a class="brand" href="' . app_h(app_url('/')) . '"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span></a>';
+        echo '<nav class="nav">';
+        if ($user) {
+            echo '<a href="' . app_h(app_url('/dashboard')) . '">Home</a>';
+            echo '<a href="' . app_h(app_url('/logout')) . '">Logout</a>';
+        } else {
+            echo '<a href="' . app_h(app_url('/')) . '">Home</a>';
+            echo '<a href="' . app_h(app_url('/login')) . '">Login</a>';
+        }
+        echo '</nav>';
+        if ($user) {
+            echo '<div class="user-chip">' . app_h((string) ($user['account_display_name'] ?? $user['name'] ?? 'User')) . '</div>';
+        }
+        echo '</header>';
     }
-    echo '</header>';
-    if ($flash) {
+    if ($flash && $showFlash) {
         echo '<div class="flash">' . app_h($flash) . '</div>';
     }
     echo $body;

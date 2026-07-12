@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS share_events (
     longitude DOUBLE PRECISION,
     location_accuracy_m DOUBLE PRECISION,
     location_captured_at TIMESTAMPTZ,
+    expires_in VARCHAR(10) NOT NULL DEFAULT '24h',
+    first_accessed_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,4 +56,3 @@ CREATE INDEX IF NOT EXISTS idx_reserved_share_tokens_profile_id ON reserved_shar
 CREATE INDEX IF NOT EXISTS idx_reserved_share_tokens_status ON reserved_share_tokens(status);
 
 COMMIT;
-

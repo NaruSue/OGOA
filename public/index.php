@@ -16,7 +16,7 @@ if ($path === '/healthz') {
 }
 
 if ($path === '/' && $method === 'GET') {
-    app_render('Home', render_home());
+    app_render('Home', render_home_simple());
     exit;
 }
 
@@ -330,6 +330,44 @@ function render_home(): string
     return (string) ob_get_clean();
 }
 
+function render_home_simple(): string
+{
+    ob_start();
+    ?>
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Meet and share</p>
+    <h1>出会った相手に、見せたいプロフィールをQRで共有。</h1>
+    <p class="lead">1G1Aは、会った相手にプロフィールや連絡先をあとから見てもらうための共有アプリです。場面に合わせたプロフィールを選んで、メッセージや写真と一緒にQRで渡せます。</p>
+    <div class="hero-actions">
+      <a class="button primary" href="<?= app_h(app_url('/login')) ?>">ログインして使う</a>
+      <a class="button secondary" href="<?= app_h(app_url('/p/demo-preview-1g1a')) ?>">デモを見る</a>
+    </div>
+  </div>
+  <div class="hero-card">
+    <div class="panel">
+      <h2>かんたんな使い方</h2>
+      <div class="step-accordion">
+        <details open>
+          <summary>1. 見せたいプロフィールを登録</summary>
+          <p>LINE、Instagram、X、メール、電話など、見せたい連絡先を登録します。プロフィールは複数作れるので、場面に合わせて分けられます。飲み仲間、仕事仲間、旅先用、秘密のうふふ用など。</p>
+        </details>
+        <details>
+          <summary>2. その場でQRを表示</summary>
+          <p>その場のノリに合わせて、見せたいプロフィールを選びます。必要ならメッセージや写真を追加して、QRを表示します。QRはあとからでも参照できます。</p>
+        </details>
+        <details>
+          <summary>3. 写真で撮ってもらう</summary>
+          <p>相手は今すぐページを開かなくても大丈夫です。この画面を写真で撮ってもらえば、あとからQRでアクセスできます。ネットが弱い場所でも使いやすい形です。</p>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+    <?php
+    return (string) ob_get_clean();
+}
+
 function render_login(?PDO $db): string
 {
     $csrf = app_h(app_csrf_token());
@@ -406,30 +444,8 @@ function render_dashboard(?PDO $db): void
 
     ob_start();
     ?>
-<section class="dashboard-grid">
-  <div class="launch-headline">
-    <p class="eyebrow">Your sharing desk</p>
-    <h1>見せたい共有プロフィールを選んで、QR を公開。</h1>
-    <p class="lead">1. プロフィールを選ぶ 2. 必要なら一言と写真を足す 3. QRを公開。スマホでそのまま使えるよう、最短の流れにしています。</p>
-    <div class="chip-row">
-      <span class="guest-badge"><?= app_h($statusLine) ?></span>
-    </div>
-  </div>
+<section class="page launch-section">
   <div class="card launch-card">
-    <div class="publish-steps" aria-label="publish steps">
-      <div class="publish-step active">
-        <span>1</span>
-        <div><strong>共有プロフィールを選ぶ</strong><p><?= app_h($profileHint) ?></p></div>
-      </div>
-      <div class="publish-step">
-        <span>2</span>
-        <div><strong>一言と写真を足す</strong><p>必要なときだけ、あとから確認してもらう内容を追加します。</p></div>
-      </div>
-      <div class="publish-step">
-        <span>3</span>
-        <div><strong>QR を公開する</strong><p>公開すると、その場で見せる画面に切り替わります。</p></div>
-      </div>
-    </div>
     <form method="post" action="<?= $createAction ?>" enctype="multipart/form-data" class="form" id="share-launcher">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <label>表示する共有プロフィール
@@ -444,9 +460,17 @@ function render_dashboard(?PDO $db): void
         <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" multiple>
         <span class="upload-note">写真は通信できないときに端末内に一時保存されます。</span>
       </label>
+      <label>QRの有効期限
+        <select name="expires_in" id="share-expires">
+          <option value="24h" selected>24時間</option>
+          <option value="3d">3日</option>
+          <option value="7d">1週間</option>
+          <option value="30d">1か月</option>
+        </select>
+      </label>
       <div class="launch-actions">
-        <button class="button secondary" type="submit">下書きを保存</button>
         <button class="button primary" type="submit" data-publish="1">QRを公開</button>
+        <button class="button secondary" type="submit">下書きを保存</button>
       </div>
       <div class="draft-banner" id="draft-status"><?= app_h($statusLine) ?></div>
     </form>
@@ -466,8 +490,17 @@ function render_dashboard(?PDO $db): void
   </div>
 </section>
 
+<section class="pwa-install-card">
+  <button class="button secondary" type="button" data-pwa-install hidden>ホーム画面に追加</button>
+  <p>スマホに追加すると、次回からすぐQRを表示できます。</p>
+</section>
+
 <section class="page narrow">
   <div class="card">
+    <details class="help-accordion">
+      <summary>使い方</summary>
+      <p><?= app_h($profileHint) ?> 必要ならメッセージと写真を追加して、QRを公開します。</p>
+    </details>
     <p class="eyebrow">Account profile</p>
     <h2>アカウントプロフィール</h2>
     <p>このアカウントにひとつだけある基本プロフィールです。共有プロフィールの土台になります。</p>
@@ -478,7 +511,7 @@ function render_dashboard(?PDO $db): void
   </div>
 </section>
     <?php
-    app_render('Dashboard', (string) ob_get_clean(), ['user' => $user]);
+    app_render('Dashboard', (string) ob_get_clean(), ['user' => $user, 'flash' => false]);
 }
 
 function render_account(?PDO $db, string $method): void
@@ -579,7 +612,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
                 $slug .= '-' . substr(bin2hex(random_bytes(4)), 0, 8);
             }
 
-            $stmt = $db->prepare('INSERT INTO profiles (user_id, slug, public_token, profile_name, display_name, bio, headline, is_public) VALUES (:user_id, :slug, :public_token, :profile_name, :display_name, :bio, :headline, :is_public)');
+            $stmt = $db->prepare('INSERT INTO profiles (user_id, slug, public_token, profile_name, display_name, bio, headline, is_public) VALUES (:user_id, :slug, :public_token, :profile_name, :display_name, :bio, :headline, :is_public) RETURNING id');
             $stmt->execute([
                 'user_id' => (int) $user['id'],
                 'slug' => $slug,
@@ -591,6 +624,8 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
                 'is_public' => $isPublic,
             ]);
             app_flash('共有プロフィールを作成しました。');
+            $newProfileId = (int) $stmt->fetchColumn();
+            app_save_profile_contacts($db, $newProfileId, (array) ($_POST['contacts'] ?? []));
             app_redirect('/dashboard');
         }
 
@@ -604,6 +639,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
             'id' => (int) $profile['id'],
         ]);
         app_flash('共有プロフィールを更新しました。');
+        app_save_profile_contacts($db, (int) $profile['id'], (array) ($_POST['contacts'] ?? []));
         app_redirect('/profiles/' . (string) $profile['id']);
     }
 
@@ -616,6 +652,8 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     $title = $profile === null ? '共有プロフィールを作成' : '共有プロフィールを編集';
     $button = $profile === null ? '作成する' : '更新する';
     $csrf = app_h(app_csrf_token());
+    $contactFields = app_profile_contact_fields();
+    $contactValues = $profile ? app_profile_contact_values(app_fetch_profile_links($db, (int) $profile['id'])) : [];
     ob_start();
     ?>
 <section class="page narrow">
@@ -637,6 +675,15 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
       <label>紹介文
         <textarea name="bio" rows="5" maxlength="1000"><?= app_h($bio) ?></textarea>
       </label>
+      <div class="form-block">
+        <h2>連絡先</h2>
+        <p class="muted">入力したものだけゲスト画面に表示されます。</p>
+        <?php foreach ($contactFields as $code => $field): ?>
+          <label><?= app_h($field['name']) ?>
+            <input name="contacts[<?= app_h((string) $code) ?>]" value="<?= app_h((string) ($contactValues[$code] ?? '')) ?>" placeholder="<?= app_h($field['placeholder']) ?>">
+          </label>
+        <?php endforeach; ?>
+      </div>
       <label class="checkbox">
         <input type="checkbox" name="is_public" value="1"<?= $checked ?>> 公開する
       </label>
@@ -646,6 +693,106 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
 </section>
     <?php
     app_render($title, (string) ob_get_clean(), ['user' => $user]);
+}
+
+function app_profile_contact_fields(): array
+{
+    return [
+        'line' => ['name' => 'LINE', 'label' => 'LINE', 'placeholder' => 'https://line.me/... または LINE ID'],
+        'instagram' => ['name' => 'Instagram', 'label' => 'Instagram', 'placeholder' => 'https://instagram.com/yourname または @yourname'],
+        'x' => ['name' => 'X', 'label' => 'X', 'placeholder' => 'https://x.com/yourname または @yourname'],
+        'email' => ['name' => 'メール', 'label' => 'Email', 'placeholder' => 'name@example.com'],
+        'phone' => ['name' => '電話', 'label' => 'Phone', 'placeholder' => '090-0000-0000'],
+    ];
+}
+
+function app_normalize_contact_url(string $code, string $value): string
+{
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if ($code === 'email') {
+        return str_starts_with($value, 'mailto:') ? $value : 'mailto:' . $value;
+    }
+
+    if ($code === 'phone') {
+        return str_starts_with($value, 'tel:') ? $value : 'tel:' . preg_replace('/[^\d+]/', '', $value);
+    }
+
+    if ($code === 'instagram' && str_starts_with($value, '@')) {
+        return 'https://instagram.com/' . ltrim($value, '@');
+    }
+
+    if ($code === 'x' && str_starts_with($value, '@')) {
+        return 'https://x.com/' . ltrim($value, '@');
+    }
+
+    if ($code === 'line' && !str_starts_with($value, 'http://') && !str_starts_with($value, 'https://')) {
+        return 'https://line.me/ti/p/' . ltrim($value, '@');
+    }
+
+    if (!str_contains($value, ':')) {
+        return 'https://' . $value;
+    }
+
+    return $value;
+}
+
+function app_profile_contact_values(array $links): array
+{
+    $values = [];
+    foreach ($links as $link) {
+        $code = (string) ($link['sns_code'] ?? '');
+        if ($code !== '') {
+            $values[$code] = (string) ($link['url'] ?? '');
+        }
+    }
+
+    return $values;
+}
+
+function app_save_profile_contacts(PDO $db, int $profileId, array $input): void
+{
+    $fields = app_profile_contact_fields();
+    $upsertType = $db->prepare(
+        'INSERT INTO sns_types (code, name, sort_order)
+         VALUES (:code, :name, :sort_order)
+         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order
+         RETURNING id'
+    );
+    $delete = $db->prepare('DELETE FROM profile_sns WHERE profile_id = :profile_id AND sns_type_id = :sns_type_id');
+    $upsertLink = $db->prepare(
+        'INSERT INTO profile_sns (profile_id, sns_type_id, label, url, sort_order, is_primary)
+         VALUES (:profile_id, :sns_type_id, :label, :url, :sort_order, false)
+         ON CONFLICT (profile_id, sns_type_id)
+         DO UPDATE SET label = EXCLUDED.label, url = EXCLUDED.url, sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP'
+    );
+
+    $order = 10;
+    foreach ($fields as $code => $field) {
+        $upsertType->execute([
+            'code' => $code,
+            'name' => $field['name'],
+            'sort_order' => $order,
+        ]);
+        $snsTypeId = (int) $upsertType->fetchColumn();
+        $url = app_normalize_contact_url($code, (string) ($input[$code] ?? ''));
+
+        if ($url === '') {
+            $delete->execute(['profile_id' => $profileId, 'sns_type_id' => $snsTypeId]);
+        } else {
+            $upsertLink->execute([
+                'profile_id' => $profileId,
+                'sns_type_id' => $snsTypeId,
+                'label' => $field['label'],
+                'url' => $url,
+                'sort_order' => $order,
+            ]);
+        }
+        $order += 10;
+    }
 }
 
 function render_profile_detail(?PDO $db, int $profileId): void
@@ -782,35 +929,37 @@ function render_profile_qr(?PDO $db, int $profileId): void
     $noticeEn = $draftMode && $event === null
         ? 'This is a draft QR while the connection is weak. It will be published automatically after sync.'
         : 'Please take a photo of this QR so you can visit my profile later.';
-    $messageJa = (string) ($event['body'] ?? '');
+    $noticeJa = $draftMode && $event === null
+        ? '通信できない時は、この画面を写真で撮っておいてください。あとでQRからアクセスできます。'
+        : '私のプロフィールと連絡先です。この画面を写真で撮って、あとでQRからアクセスしてください。';
+    $noticeEn = $draftMode && $event === null
+        ? 'If the connection is weak, please take a photo of this screen and visit from the QR later.'
+        : 'My profile and contact links are here. Please take a photo of this screen and visit from the QR later.';
+    $messageJa = trim((string) ($event['body'] ?? ''));
     $messageEn = $messageJa !== ''
         ? 'You can read my social links and message later from this QR.'
-        : 'No message yet. You can still take a photo of this QR and visit later.';
+        : '';
     ob_start();
     ?>
 <section class="page narrow">
   <div class="card qr-card">
-    <p class="eyebrow">Share this profile</p>
     <h1><?= app_h((string) $profile['display_name']) ?></h1>
+    <div class="qr-frame">
+      <img src="<?= $qrUrl ?>" alt="QR code">
+    </div>
+    <?php if ($messageJa !== ''): ?>
+    <div class="qr-message">
+      <p><?= nl2br(app_h($messageJa)) ?></p>
+    </div>
+    <?php endif; ?>
     <div class="qr-copy">
       <p><?= app_h($noticeJa) ?></p>
       <p class="muted"><?= app_h($noticeEn) ?></p>
-    </div>
-    <div class="message-box">
-      <div class="message-head">
-        <span class="guest-badge">Message</span>
-      </div>
-      <p><?= nl2br(app_h($messageJa)) ?: 'まだメッセージはありません。' ?></p>
-      <p class="muted"><?= app_h($messageEn) ?></p>
-    </div>
-    <div class="qr-frame">
-      <img src="<?= $qrUrl ?>" alt="QR code">
     </div>
     <div class="qr-url">
       <span>URL</span>
       <a href="<?= app_h($shareUrl) ?>"><?= app_h($shareUrl) ?></a>
     </div>
-    <div class="notice">位置情報は、QRを公開するときに許可された場合だけ保存します。</div>
   </div>
 </section>
     <?php
@@ -819,7 +968,8 @@ function render_profile_qr(?PDO $db, int $profileId): void
         (string) ob_get_clean(),
         [
             'user' => $user,
-            'meta' => '<script>window.__QR_EVENT_ID=' . json_encode($event ? (int) $event['id'] : null) . ';window.__QR_EVENT_TOKEN=' . json_encode($token) . ';</script>',
+            'meta' => '<script>window.__QR_LOCATION_CAPTURE=true;window.__QR_EVENT_ID=' . json_encode($event ? (int) $event['id'] : null) . ';window.__QR_EVENT_TOKEN=' . json_encode($token) . ';</script>',
+            'chrome' => false,
         ]
     );
 }
@@ -945,12 +1095,18 @@ function render_share_event(?PDO $db, string $token, string $method): void
         $viewerToken = app_guest_token_from_cookie() ?? bin2hex(random_bytes(16));
         app_upsert_guest_visitor($db, $viewerToken, $guestName);
         app_set_guest_identity_cookie($viewerToken, $guestName);
+        $event = app_touch_share_event_first_access($db, (int) $event['id']) ?? $event;
         app_log_share_access($db, (int) $event['id'], (int) $event['profile_id'], $viewerToken);
         app_redirect('/s/' . $token);
     }
 
     if ((string) ($event['status'] ?? 'ready') !== 'ready') {
         app_render('準備中', render_preparing_page($token));
+        return;
+    }
+
+    if (app_share_event_expired($event)) {
+        app_render('期限切れ', render_expired_share_page(), ['chrome' => false]);
         return;
     }
 
@@ -966,14 +1122,19 @@ function render_share_event(?PDO $db, string $token, string $method): void
     }
 
     if ($guestName === null) {
-        app_render((string) $event['profile_display_name'], render_guest_name_screen($event, $token));
+        app_render((string) $event['profile_display_name'], render_guest_name_screen_simple($event, $token), ['chrome' => false]);
         return;
     }
 
+    $event = app_touch_share_event_first_access($db, (int) $event['id']) ?? $event;
+    if (app_share_event_expired($event)) {
+        app_render('期限切れ', render_expired_share_page(), ['chrome' => false]);
+        return;
+    }
     app_log_share_access($db, (int) $event['id'], (int) $event['profile_id'], $viewerToken);
     $photos = app_fetch_share_event_photos($db, (int) $event['id']);
     $links = app_fetch_profile_links($db, (int) $event['profile_id']);
-    app_render((string) $event['profile_display_name'], render_guest_profile_screen($event, $guestName, $photos, $links), ['meta' => '<script>window.__QR_EVENT_ID=' . json_encode((int) $event['id']) . ';</script>']);
+    app_render((string) $event['profile_display_name'], render_guest_profile_screen_simple($event, $guestName, $photos, $links), ['chrome' => false]);
 }
 
 function render_public_profile(?PDO $db, string $token): void
@@ -1057,6 +1218,106 @@ function render_preparing_page(string $token): string
     <p class="muted">Token: <?= app_h($token) ?></p>
   </div>
 </section>
+    <?php
+    return (string) ob_get_clean();
+}
+
+function render_expired_share_page(): string
+{
+    ob_start();
+    ?>
+<section class="page narrow">
+  <div class="card center">
+    <h1>このQRは期限切れです</h1>
+    <p class="lead">共有されたプロフィールは表示できません。</p>
+    <p><a class="button secondary" href="<?= app_h(app_url('/')) ?>">1G1Aを見る</a></p>
+  </div>
+</section>
+    <?php
+    return (string) ob_get_clean();
+}
+
+function render_guest_name_screen_simple(array $event, string $token): string
+{
+    ob_start();
+    ?>
+<section class="page narrow">
+  <div class="card guest-card">
+    <h1><?= app_h((string) $event['profile_display_name']) ?></h1>
+    <p class="lead">ニックネームを入れて次へ進んでください。</p>
+    <form method="post" action="<?= app_h(app_url('/s/' . $token)) ?>" class="form">
+      <input type="hidden" name="_csrf" value="<?= app_h(app_csrf_token()) ?>">
+      <label>
+        <input name="guest_name" maxlength="40" required placeholder="ニックネーム">
+      </label>
+      <button class="button primary" type="submit">次へ</button>
+    </form>
+  </div>
+</section>
+    <?php
+    return (string) ob_get_clean();
+}
+
+function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links): string
+{
+    $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
+    $profileBio = trim((string) ($event['profile_bio'] ?? ''));
+    $message = trim((string) ($event['body'] ?? ''));
+
+    $photoHtml = '';
+    foreach ($photos as $photo) {
+        $photoHtml .= '<img src="' . app_h(app_url('/media/' . basename((string) $photo['storage_path']))) . '" alt="共有写真" loading="lazy">';
+    }
+
+    $linkHtml = '';
+    foreach ($links as $link) {
+        $linkHtml .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
+    }
+
+    ob_start();
+    ?>
+<section class="guest-hero">
+  <div class="hero-copy">
+    <h1><?= app_h($guestName) ?>さん、ようこそ</h1>
+    <h2><?= app_h((string) $event['profile_display_name']) ?></h2>
+    <?php if ($profileHeadline !== ''): ?>
+      <p class="lead"><?= app_h($profileHeadline) ?></p>
+    <?php endif; ?>
+    <?php if ($profileBio !== ''): ?>
+      <p><?= nl2br(app_h($profileBio)) ?></p>
+    <?php endif; ?>
+    <?php if ($message !== ''): ?>
+      <div class="message-box">
+        <div class="message-head">
+          <span class="guest-badge">今日のメッセージ</span>
+        </div>
+        <p><?= nl2br(app_h($message)) ?></p>
+      </div>
+    <?php endif; ?>
+  </div>
+  <?php if ($photoHtml !== '' || $linkHtml !== ''): ?>
+    <div class="card guest-card">
+      <?php if ($photoHtml !== ''): ?>
+        <h2>今日の写真</h2>
+        <div class="photo-grid">
+          <?= $photoHtml ?>
+        </div>
+      <?php endif; ?>
+      <?php if ($linkHtml !== ''): ?>
+        <h2>SNS・リンク</h2>
+        <div class="social-list">
+          <?= $linkHtml ?>
+        </div>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+</section>
+<footer class="guest-footer">
+  <a class="guest-app-link" href="<?= app_h(app_url('/')) ?>">
+    <span class="guest-app-icon">1G1A</span>
+    <span>このアプリを見る</span>
+  </a>
+</footer>
     <?php
     return (string) ob_get_clean();
 }
