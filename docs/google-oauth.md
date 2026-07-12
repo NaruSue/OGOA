@@ -24,4 +24,3 @@ Google アカウントを使って、1G1A の利用者を認証します。
 - `state` を必ず検証する
 - トークンをログに出さない
 - Cookie は `HttpOnly` と `SameSite` を設定する
-

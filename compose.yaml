@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: 1g1a-postgres
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-ogoa}
+      POSTGRES_USER: ${DB_USERNAME:-ogoa_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ogoa_local_password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init/001_apply_sql.sh:/docker-entrypoint-initdb.d/001_apply_sql.sh:ro
+      - ./database/migrations:/docker-entrypoint-initdb.d/10-migrations:ro
+      - ./database/seeds:/docker-entrypoint-initdb.d/20-seeds:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-ogoa_app} -d ${DB_DATABASE:-ogoa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

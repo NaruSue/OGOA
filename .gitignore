@@ -1,7 +1,8 @@
-# Environment
+﻿# Environment
 .env
 .env.local
 .env.*.local
+docs.local/
 
 # PHP / Composer
 vendor/
@@ -21,4 +22,4 @@ Thumbs.db
 tmp/
 cache/
 storage/
-
+1g1a-project-backup.zip

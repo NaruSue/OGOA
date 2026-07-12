@@ -36,3 +36,8 @@
 - Back4App Home: https://www.back4app.com/
 - Back4App Docs: https://www.back4app.com/docs
 
+## Operations
+
+- [SSH connection rules](SSH.md)
+- [VPS deployment notes](docs/deployment-vps.md)
+- [Local Docker database](docs/local-docker-db.md)
