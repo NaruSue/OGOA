@@ -433,6 +433,37 @@ function render_dashboard(?PDO $db): void
         $profileCards .= '<article class="list-card"><div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '公開中' : '非公開') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId)) . '">詳細</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
     }
 
+    $eventPageSize = 5;
+    $eventCount = app_count_dashboard_events($db, (int) $user['id']);
+    $eventPageCount = max(1, (int) ceil($eventCount / $eventPageSize));
+    $eventPage = max(1, min((int) ($_GET['events_page'] ?? 1), $eventPageCount));
+    $dashboardEvents = app_fetch_dashboard_events(
+        $db,
+        (int) $user['id'],
+        $eventPageSize,
+        ($eventPage - 1) * $eventPageSize
+    );
+    $eventRows = '';
+    foreach ($dashboardEvents as $event) {
+        $createdAt = strtotime((string) ($event['created_at'] ?? ''));
+        $eventDate = $createdAt !== false ? date('Y年n月j日 H:i', $createdAt) : '';
+        $profileName = trim((string) ($event['profile_name'] ?? ''));
+        if ($profileName === '') {
+            $profileName = (string) ($event['profile_display_name'] ?? '共有プロフィール');
+        }
+        $message = preg_replace('/\s+/u', ' ', trim((string) ($event['body'] ?? ''))) ?? '';
+        if ($message === '') {
+            $message = 'メッセージなし';
+        } elseif (function_exists('mb_strimwidth')) {
+            $message = mb_strimwidth($message, 0, 72, '…', 'UTF-8');
+        } elseif (strlen($message) > 72) {
+            $message = substr($message, 0, 69) . '...';
+        }
+        $eventRows .= '<a class="event-row" href="' . app_h(app_url('/s/' . (string) $event['public_token'])) . '">';
+        $eventRows .= '<span class="event-row-main"><span class="event-row-meta"><strong>' . app_h($profileName) . '</strong><time datetime="' . app_h((string) ($event['created_at'] ?? '')) . '">' . app_h($eventDate) . '</time></span>';
+        $eventRows .= '<p>' . app_h($message) . '</p></span></a>';
+    }
+
     $firstProfileId = $profiles !== [] ? (int) $profiles[0]['id'] : 0;
     $reserveCount = $profiles !== [] ? count(app_fetch_reserved_tokens($db, (int) $user['id'], $firstProfileId)) : 0;
     $statusLine = $reserveCount > 0 ? '予約済みトークン ' . $reserveCount . ' 件' : '予約済みトークンはまだありません';
@@ -458,7 +489,7 @@ function render_dashboard(?PDO $db): void
         <textarea name="body" id="share-body" rows="4" maxlength="2000" placeholder="今日はありがとうございました。"></textarea>
       </label>
       <label class="upload-field">写真を追加 <span class="optional">複数可 / カメラ起動可</span>
-        <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment" multiple>
+        <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
         <span class="upload-note">写真は通信できないときに端末内に一時保存されます。</span>
       </label>
       <label>QRの有効期限
@@ -494,6 +525,36 @@ function render_dashboard(?PDO $db): void
 <section class="pwa-install-card">
   <button class="button secondary" type="button" data-pwa-install hidden>ホーム画面に追加</button>
   <p>スマホに追加すると、次回からすぐQRを表示できます。</p>
+</section>
+
+<section class="page">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Share events</p>
+      <h2>共有イベント</h2>
+    </div>
+    <?php if ($eventCount > 0): ?>
+      <span class="muted"><?= $eventCount ?> 件</span>
+    <?php endif; ?>
+  </div>
+  <div class="event-list">
+    <?= $eventRows !== '' ? $eventRows : '<div class="empty">表示できる共有イベントはまだありません。</div>' ?>
+  </div>
+  <?php if ($eventPageCount > 1): ?>
+    <nav class="pagination" aria-label="共有イベントのページ">
+      <?php if ($eventPage > 1): ?>
+        <a class="button secondary" href="<?= app_h(app_url('/dashboard?events_page=' . ($eventPage - 1))) ?>">前へ</a>
+      <?php else: ?>
+        <span class="button secondary disabled" aria-disabled="true">前へ</span>
+      <?php endif; ?>
+      <span class="pagination-state"><?= $eventPage ?> / <?= $eventPageCount ?></span>
+      <?php if ($eventPage < $eventPageCount): ?>
+        <a class="button secondary" href="<?= app_h(app_url('/dashboard?events_page=' . ($eventPage + 1))) ?>">次へ</a>
+      <?php else: ?>
+        <span class="button secondary disabled" aria-disabled="true">次へ</span>
+      <?php endif; ?>
+    </nav>
+  <?php endif; ?>
 </section>
 
 <section class="page narrow">
@@ -595,6 +656,12 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         app_require_csrf();
         $profileName = trim((string) ($_POST['profile_name'] ?? ''));
         $displayName = trim((string) ($_POST['display_name'] ?? ''));
+        $avatarUrl = $profile ? trim((string) ($profile['avatar_url'] ?? '')) : '';
+        $avatarUpload = $_FILES['avatar_upload'] ?? null;
+        if (is_array($avatarUpload) && ($avatarUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $storedAvatar = app_store_uploaded_photo($avatarUpload, 'profile_avatar');
+            $avatarUrl = '/media/' . basename((string) $storedAvatar['storage_path']);
+        }
         $headline = trim((string) ($_POST['headline'] ?? ''));
         $bio = trim((string) ($_POST['bio'] ?? ''));
         $isPublic = isset($_POST['is_public']) && $_POST['is_public'] === '1';
@@ -613,13 +680,14 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
                 $slug .= '-' . substr(bin2hex(random_bytes(4)), 0, 8);
             }
 
-            $stmt = $db->prepare('INSERT INTO profiles (user_id, slug, public_token, profile_name, display_name, bio, headline, is_public) VALUES (:user_id, :slug, :public_token, :profile_name, :display_name, :bio, :headline, :is_public) RETURNING id');
+            $stmt = $db->prepare('INSERT INTO profiles (user_id, slug, public_token, profile_name, display_name, avatar_url, bio, headline, is_public) VALUES (:user_id, :slug, :public_token, :profile_name, :display_name, :avatar_url, :bio, :headline, :is_public) RETURNING id');
             $stmt->execute([
                 'user_id' => (int) $user['id'],
                 'slug' => $slug,
                 'public_token' => app_generate_public_token($db),
                 'profile_name' => $profileName,
                 'display_name' => $displayName,
+                'avatar_url' => $avatarUrl !== '' ? $avatarUrl : null,
                 'bio' => $bio !== '' ? $bio : null,
                 'headline' => $headline !== '' ? $headline : null,
                 'is_public' => $isPublic,
@@ -630,10 +698,11 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
             app_redirect('/dashboard');
         }
 
-        $stmt = $db->prepare('UPDATE profiles SET profile_name = :profile_name, display_name = :display_name, headline = :headline, bio = :bio, is_public = :is_public, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $db->prepare('UPDATE profiles SET profile_name = :profile_name, display_name = :display_name, avatar_url = :avatar_url, headline = :headline, bio = :bio, is_public = :is_public, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             'profile_name' => $profileName,
             'display_name' => $displayName,
+            'avatar_url' => $avatarUrl !== '' ? $avatarUrl : null,
             'headline' => $headline !== '' ? $headline : null,
             'bio' => $bio !== '' ? $bio : null,
             'is_public' => $isPublic,
@@ -647,6 +716,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     $defaultDisplay = (string) ($user['account_display_name'] ?? $user['name'] ?? '');
     $profileName = $profile ? (string) $profile['profile_name'] : '';
     $displayName = $profile ? (string) $profile['display_name'] : $defaultDisplay;
+    $avatarUrl = $profile ? (string) ($profile['avatar_url'] ?? '') : '';
     $headline = $profile ? (string) ($profile['headline'] ?? '') : '';
     $bio = $profile ? (string) ($profile['bio'] ?? '') : '';
     $checked = $profile === null || (bool) $profile['is_public'] ? ' checked' : '';
@@ -662,13 +732,22 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     <p class="eyebrow">Share profile</p>
     <h1><?= app_h($title) ?></h1>
     <p>1アカウントで複数持てる公開プロフィールです。用途ごとに分けて使えます。</p>
-    <form method="post" class="form">
+    <form method="post" enctype="multipart/form-data" class="form">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <label>共有プロフィール名
         <input name="profile_name" required maxlength="120" value="<?= app_h($profileName) ?>" placeholder="仕事用 / 友人用 / 旅先用">
       </label>
       <label>公開表示名
         <input name="display_name" required maxlength="120" value="<?= app_h($displayName) ?>">
+      </label>
+      <label class="upload-field">プロフィール画像 <span class="optional">写真を選択、またはカメラで撮影</span>
+        <?php if ($avatarUrl !== ''): ?>
+          <span class="avatar-upload-preview">
+            <?= app_render_profile_avatar($avatarUrl, $displayName, 'avatar-preview') ?>
+            <span>登録済みの画像があります。変更する場合だけ新しい写真を選んでください。</span>
+          </span>
+        <?php endif; ?>
+        <input type="file" name="avatar_upload" accept="image/jpeg,image/png,image/webp,image/gif">
       </label>
       <label>見出し
         <input name="headline" maxlength="160" value="<?= app_h($headline) ?>" placeholder="旅と写真が好きです">
@@ -1062,6 +1141,19 @@ function serve_media(?PDO $db, string $filename): void
     $stmt->execute(['storage_path' => $storagePath]);
     $mimeType = $stmt->fetchColumn();
     $file = app_root('storage/' . $storagePath);
+    if (!is_string($mimeType)) {
+        $relativeUrl = '/media/' . $filename;
+        $absoluteUrl = app_url($relativeUrl);
+        $profileStmt = $db->prepare('SELECT 1 FROM profiles WHERE avatar_url IN (:relative_url, :absolute_url) LIMIT 1');
+        $profileStmt->execute([
+            'relative_url' => $relativeUrl,
+            'absolute_url' => $absoluteUrl,
+        ]);
+        if ($profileStmt->fetchColumn()) {
+            $info = is_file($file) ? @getimagesize($file) : false;
+            $mimeType = is_array($info) && isset($info['mime']) ? (string) $info['mime'] : false;
+        }
+    }
     if (!is_string($mimeType) || !is_file($file)) {
         http_response_code(404);
         exit;
@@ -1332,8 +1424,10 @@ function render_guest_message_box(string $token): string
 
 function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links): string
 {
+    $profileDisplayName = app_guest_display_name($event);
     $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
     $profileBio = trim((string) ($event['profile_bio'] ?? ''));
+    $profileAvatarUrl = trim((string) ($event['profile_avatar_url'] ?? ''));
     $message = trim((string) ($event['body'] ?? ''));
 
     $photoHtml = '';
@@ -1348,16 +1442,14 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
 
     ob_start();
     ?>
-<section class="guest-hero">
-  <div class="hero-copy">
+<section class="guest-event-page">
+  <header class="guest-welcome">
     <h1><?= app_h($guestName) ?>さん、ようこそ</h1>
-    <h2><?= app_h(app_guest_display_name($event)) ?></h2>
-    <?php if ($profileHeadline !== ''): ?>
-      <p class="lead"><?= app_h($profileHeadline) ?></p>
-    <?php endif; ?>
-    <?php if ($profileBio !== ''): ?>
-      <p><?= nl2br(app_h($profileBio)) ?></p>
-    <?php endif; ?>
+  </header>
+
+  <section class="card guest-card guest-event-card">
+    <p class="eyebrow">Event</p>
+    <h2>イベント</h2>
     <?php if ($message !== ''): ?>
       <div class="message-box">
         <div class="message-head">
@@ -1366,22 +1458,43 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
         <p><?= nl2br(app_h($message)) ?></p>
       </div>
     <?php endif; ?>
-  </div>
-    <div class="card guest-card">
-      <?php if ($photoHtml !== ''): ?>
-        <h2>今日の写真</h2>
-        <div class="photo-grid">
-          <?= $photoHtml ?>
-        </div>
-      <?php endif; ?>
-      <?php if ($linkHtml !== ''): ?>
-        <h2>SNS・リンク</h2>
+    <?php if ($photoHtml !== ''): ?>
+      <h3>今日の写真</h3>
+      <div class="photo-grid">
+        <?= $photoHtml ?>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="card guest-card guest-profile-card">
+    <p class="eyebrow">Profile</p>
+    <h2>プロフィール</h2>
+    <div class="hero-profile">
+      <?= app_render_profile_avatar($profileAvatarUrl, $profileDisplayName) ?>
+      <div class="guest-profile-copy">
+        <h3><?= app_h($profileDisplayName) ?></h3>
+        <?php if ($profileHeadline !== ''): ?>
+          <p class="lead"><?= app_h($profileHeadline) ?></p>
+        <?php endif; ?>
+        <?php if ($profileBio !== ''): ?>
+          <p><?= nl2br(app_h($profileBio)) ?></p>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php if ($linkHtml !== ''): ?>
+      <div class="guest-profile-links">
+        <h3>SNS・リンク</h3>
         <div class="social-list">
           <?= $linkHtml ?>
         </div>
-      <?php endif; ?>
-      <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
-    </div>
+      </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="card guest-card guest-message-section">
+    <h2>ひとことメッセージ</h2>
+    <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
+  </section>
 </section>
 <footer class="guest-footer">
   <a class="guest-app-link" href="<?= app_h(app_url('/')) ?>">

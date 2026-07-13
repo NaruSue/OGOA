@@ -37,6 +37,7 @@
 - `public_token`
 - `profile_name`
 - `display_name`
+- `avatar_url`
 - `headline`
 - `bio`
 - `is_public`
@@ -225,4 +226,3 @@ QR からアクセスしたゲストの名前と Cookie トークンを保存し
 - コメント、位置情報、写真 Blob、予約済み `public_token`、作成日時を保存する
 - 通信復帰時に順番にアップロードする
 - アップロード完了後に端末内データを削除、または同期済みとして保持する
-

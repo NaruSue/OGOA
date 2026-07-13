@@ -1,4 +1,4 @@
-const CACHE_NAME = '1g1a-app-v1';
+const CACHE_NAME = '1g1a-app-v2';
 const APP_SHELL = [
   '/',
   '/dashboard',

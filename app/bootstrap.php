@@ -486,10 +486,11 @@ function app_fetch_profile_links(PDO $db, int $profileId): array
 function app_fetch_recent_events(PDO $db, int $profileId, int $limit = 5): array
 {
     $stmt = $db->prepare(
-        'SELECT *
-         FROM share_events
-         WHERE profile_id = :profile_id
-         ORDER BY created_at DESC, id DESC
+        'SELECT se.*, p.avatar_url AS profile_avatar_url
+         FROM share_events se
+         INNER JOIN profiles p ON p.id = se.profile_id
+         WHERE se.profile_id = :profile_id
+         ORDER BY se.created_at DESC, se.id DESC
          LIMIT :limit'
     );
     $stmt->bindValue(':profile_id', $profileId, PDO::PARAM_INT);
@@ -499,10 +500,45 @@ function app_fetch_recent_events(PDO $db, int $profileId, int $limit = 5): array
     return $stmt->fetchAll() ?: [];
 }
 
+function app_count_dashboard_events(PDO $db, int $userId): int
+{
+    $stmt = $db->prepare(
+        "SELECT COUNT(*)
+         FROM share_events se
+         INNER JOIN profiles p ON p.id = se.profile_id
+         WHERE p.user_id = :user_id
+           AND se.status = 'ready'
+           AND (se.expires_at IS NULL OR se.expires_at >= CURRENT_TIMESTAMP)"
+    );
+    $stmt->execute(['user_id' => $userId]);
+
+    return (int) $stmt->fetchColumn();
+}
+
+function app_fetch_dashboard_events(PDO $db, int $userId, int $limit = 5, int $offset = 0): array
+{
+    $stmt = $db->prepare(
+        "SELECT se.*, p.profile_name, p.display_name AS profile_display_name
+         FROM share_events se
+         INNER JOIN profiles p ON p.id = se.profile_id
+         WHERE p.user_id = :user_id
+           AND se.status = 'ready'
+           AND (se.expires_at IS NULL OR se.expires_at >= CURRENT_TIMESTAMP)
+         ORDER BY se.created_at DESC, se.id DESC
+         LIMIT :limit OFFSET :offset"
+    );
+    $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+    $stmt->bindValue(':offset', max(0, $offset), PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll() ?: [];
+}
+
 function app_fetch_share_event_by_token(PDO $db, string $token): ?array
 {
     $stmt = $db->prepare(
-        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name, p.headline AS profile_headline, p.bio AS profile_bio, p.is_public, p.user_id
+        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name, p.headline AS profile_headline, p.bio AS profile_bio, p.is_public, p.user_id, p.avatar_url AS profile_avatar_url
          FROM share_events se
          INNER JOIN profiles p ON p.id = se.profile_id
          WHERE se.public_token = :token
@@ -520,6 +556,21 @@ function app_fetch_share_event_photos(PDO $db, int $eventId): array
     $stmt->execute(['id' => $eventId]);
 
     return $stmt->fetchAll() ?: [];
+}
+
+function app_render_profile_avatar(?string $avatarUrl, string $label, string $className = 'hero-avatar'): string
+{
+    $avatarUrl = trim((string) $avatarUrl);
+    $safeLabel = trim($label);
+    $fallback = $safeLabel !== '' ? (function_exists('mb_substr') ? mb_substr($safeLabel, 0, 2, 'UTF-8') : substr($safeLabel, 0, 2)) : '1G';
+
+    if ($avatarUrl !== '') {
+        $avatarSize = $className === 'avatar-preview' ? 112 : 140;
+
+        return '<img class="' . app_h($className) . '" src="' . app_h($avatarUrl) . '" alt="' . app_h($safeLabel !== '' ? $safeLabel : 'profile') . '" width="' . $avatarSize . '" height="' . $avatarSize . '">';
+    }
+
+    return '<div class="' . app_h($className) . ' hero-avatar-fallback" aria-label="' . app_h($safeLabel !== '' ? $safeLabel : 'profile') . '"><span>' . app_h($fallback) . '</span></div>';
 }
 
 function app_store_uploaded_photo(array $file, string $prefix = 'share'): array
@@ -928,9 +979,24 @@ function app_touch_share_event_first_access(PDO $db, int $eventId): ?array
              END)::interval)),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = :id
-         RETURNING *"
+         RETURNING id"
     );
     $stmt->execute(['id' => $eventId]);
+    $updatedEventId = $stmt->fetchColumn();
+    if ($updatedEventId === false) {
+        return null;
+    }
+
+    $stmt = $db->prepare(
+        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name,
+                p.headline AS profile_headline, p.bio AS profile_bio,
+                p.is_public, p.user_id, p.avatar_url AS profile_avatar_url
+         FROM share_events se
+         INNER JOIN profiles p ON p.id = se.profile_id
+         WHERE se.id = :id
+         LIMIT 1'
+    );
+    $stmt->execute(['id' => (int) $updatedEventId]);
     $event = $stmt->fetch();
 
     return $event ?: null;
@@ -983,6 +1049,8 @@ function app_render(string $title, string $body, array $context = []): void
     $meta = $context['meta'] ?? '';
     $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
+    $cssVersion = (string) (filemtime(app_root('public/assets/app.css')) ?: time());
+    $jsVersion = (string) (filemtime(app_root('public/assets/app.js')) ?: time());
 
     header('Content-Type: text/html; charset=UTF-8');
     echo '<!doctype html><html lang="ja"><head><meta charset="utf-8">';
@@ -997,8 +1065,8 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">';
     echo '<link rel="manifest" href="' . app_h(app_url('/manifest.webmanifest')) . '">';
     echo '<meta name="theme-color" content="#0f5b66">';
-    echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css')) . '">';
-    echo '<script defer src="' . app_h(app_url('/assets/app.js')) . '"></script>';
+    echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css?v=' . $cssVersion)) . '">';
+    echo '<script defer src="' . app_h(app_url('/assets/app.js?v=' . $jsVersion)) . '"></script>';
     echo '</head><body>';
     echo '<div class="shell">';
     if ($chrome) {

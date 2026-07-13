@@ -40,4 +40,7 @@
 
 - [SSH connection rules](SSH.md)
 - [VPS deployment notes](docs/deployment-vps.md)
+- [Codex workflow](docs/codex-workflow.md)
 - [Local Docker database](docs/local-docker-db.md)
+- [Shared event screen design](docs/shared-event-screen-design.md)
+- Text files should be UTF-8 without BOM; avoid introducing encoding changes when editing existing files.
