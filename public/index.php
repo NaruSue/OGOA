@@ -1166,7 +1166,7 @@ function render_share_event(?PDO $db, string $token, string $method): void
     }
 
     if ($guestName === null) {
-        app_render((string) $event['profile_display_name'], render_guest_name_screen_simple($event, $token), ['chrome' => false]);
+        app_render(app_guest_display_name($event), render_guest_name_screen_simple($event, $token), ['chrome' => false]);
         return;
     }
 
@@ -1178,7 +1178,7 @@ function render_share_event(?PDO $db, string $token, string $method): void
     app_log_share_access($db, (int) $event['id'], (int) $event['profile_id'], $viewerToken);
     $photos = app_fetch_share_event_photos($db, (int) $event['id']);
     $links = app_fetch_profile_links($db, (int) $event['profile_id']);
-    app_render((string) $event['profile_display_name'], render_guest_profile_screen_simple($event, $guestName, $photos, $links), ['chrome' => false]);
+    app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $guestName, $photos, $links), ['chrome' => false]);
 }
 
 function render_public_profile(?PDO $db, string $token): void
@@ -1287,7 +1287,7 @@ function render_guest_name_screen_simple(array $event, string $token): string
     ?>
 <section class="page narrow">
   <div class="card guest-card">
-    <h1><?= app_h((string) $event['profile_display_name']) ?></h1>
+    <h1><?= app_h(app_guest_display_name($event)) ?></h1>
     <p class="lead">ニックネームを入れて次へ進んでください。</p>
     <form method="post" action="<?= app_h(app_url('/s/' . $token)) ?>" class="form">
       <input type="hidden" name="_csrf" value="<?= app_h(app_csrf_token()) ?>">
@@ -1405,7 +1405,7 @@ function render_guest_name_screen(array $event, string $token): string
     <div class="message-box">
       <div class="message-head">
         <span class="guest-badge">ようこそ</span>
-        <span class="muted"><?= app_h((string) $event['profile_display_name']) ?></span>
+        <span class="muted"><?= app_h(app_guest_display_name($event)) ?></span>
       </div>
       <h2><?= app_h((string) ($event['profile_headline'] ?? '')) ?></h2>
       <p><?= nl2br(app_h((string) ($event['body'] ?? ''))) ?></p>
