@@ -22,6 +22,8 @@ PSQL=(psql --host "$DB_HOST" --port "$DB_PORT" --username "$DB_USERNAME" --dbnam
 "${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/migrations/001_initial_schema.sql
 "${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/migrations/002_account_and_public_profiles.sql
 "${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/migrations/003_share_events_and_tokens.sql
+"${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/migrations/004_share_event_expiration.sql
+"${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/migrations/005_guest_messages.sql
 "${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/seeds/001_sns_types.sql
 "${PSQL[@]}" -v ON_ERROR_STOP=1 -f database/seeds/002_demo_profile.sql
 unset PGPASSWORD

@@ -515,6 +515,18 @@ p:last-child { margin-bottom: 0; }
   margin-bottom: 12px;
 }
 
+.guest-message-box {
+  margin-top: 6px;
+}
+
+.guest-message-form {
+  gap: 10px;
+}
+
+.guest-message-form textarea {
+  min-height: 84px;
+}
+
 .empty {
   padding: 18px;
   color: var(--muted);

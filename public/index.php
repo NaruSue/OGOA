@@ -363,6 +363,7 @@ function render_home_simple(): string
       </div>
     </div>
   </div>
+  <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
 </section>
     <?php
     return (string) ob_get_clean();
@@ -1086,6 +1087,49 @@ function render_share_event(?PDO $db, string $token, string $method): void
 
     if ($method === 'POST') {
         app_require_csrf();
+        if (array_key_exists('guest_message', $_POST)) {
+            $guestMessage = trim((string) ($_POST['guest_message'] ?? ''));
+            if ($guestMessage === '') {
+                app_flash('メッセージを入力してください。');
+                app_redirect('/s/' . $token);
+            }
+            $viewerToken = app_guest_token_from_cookie();
+            $guestName = app_guest_name_from_cookie();
+            if ($viewerToken !== null && $guestName === null) {
+                $stmt = $db->prepare('SELECT display_name FROM guest_visitors WHERE viewer_token = :viewer_token LIMIT 1');
+                $stmt->execute(['viewer_token' => $viewerToken]);
+                $stored = $stmt->fetchColumn();
+                if (is_string($stored) && $stored !== '') {
+                    $guestName = $stored;
+                }
+            }
+            if ($guestName === null) {
+                app_flash('名前を登録してから送信してください。');
+                app_redirect('/s/' . $token);
+            }
+
+            $guestMessage = preg_replace('/[\r\n]+/u', ' ', $guestMessage);
+            $guestMessage = is_string($guestMessage) ? trim($guestMessage) : '';
+            if ($guestMessage === '' || (function_exists('mb_strlen') ? mb_strlen($guestMessage, 'UTF-8') : strlen($guestMessage)) > 50) {
+                app_flash('メッセージは50文字以内で入力してください。');
+                app_redirect('/s/' . $token);
+            }
+
+            $owner = app_fetch_profile_owner($db, (int) $event['profile_id']);
+            $recipientEmail = trim((string) ($owner['user_email'] ?? ''));
+            if ($recipientEmail === '') {
+                app_flash('受信先メールアドレスが設定されていません。');
+                app_redirect('/s/' . $token);
+            }
+
+            $viewerToken = $viewerToken ?? bin2hex(random_bytes(16));
+            app_upsert_guest_visitor($db, $viewerToken, $guestName);
+            app_set_guest_identity_cookie($viewerToken, $guestName);
+            app_store_guest_message($db, (int) $event['profile_id'], (int) $event['id'], $guestName, $guestMessage, $recipientEmail);
+            $sent = app_send_guest_message_notification($db, $event, $guestName, $guestMessage);
+            app_flash($sent ? 'メッセージを送信しました。' : 'メッセージは保存しましたが、メール送信に失敗しました。');
+            app_redirect('/s/' . $token);
+        }
         $guestName = app_normalize_guest_name((string) ($_POST['guest_name'] ?? ''));
         if (!app_valid_guest_name($guestName)) {
             app_flash('名前を入力してください。');
@@ -1258,6 +1302,34 @@ function render_guest_name_screen_simple(array $event, string $token): string
     return (string) ob_get_clean();
 }
 
+function app_guest_display_name(array $event): string
+{
+    $name = trim((string) ($event['profile_display_name'] ?? $event['profile_name'] ?? ''));
+
+    return $name !== '' ? $name : '1G1A';
+}
+
+function render_guest_message_box(string $token): string
+{
+    ob_start();
+    ?>
+    <div class="message-box guest-message-box">
+      <div class="message-head">
+        <span class="guest-badge">ひとことメッセージ</span>
+        <span class="muted">50文字まで</span>
+      </div>
+      <form method="post" action="<?= app_h(app_url('/s/' . $token)) ?>" class="form guest-message-form">
+        <input type="hidden" name="_csrf" value="<?= app_h(app_csrf_token()) ?>">
+        <label>
+          <textarea name="guest_message" maxlength="50" rows="2" placeholder="ひとことだけ送れます"></textarea>
+        </label>
+        <button class="button primary" type="submit">送信</button>
+      </form>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+}
+
 function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links): string
 {
     $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
@@ -1279,7 +1351,7 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
 <section class="guest-hero">
   <div class="hero-copy">
     <h1><?= app_h($guestName) ?>さん、ようこそ</h1>
-    <h2><?= app_h((string) $event['profile_display_name']) ?></h2>
+    <h2><?= app_h(app_guest_display_name($event)) ?></h2>
     <?php if ($profileHeadline !== ''): ?>
       <p class="lead"><?= app_h($profileHeadline) ?></p>
     <?php endif; ?>
@@ -1295,7 +1367,6 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
       </div>
     <?php endif; ?>
   </div>
-  <?php if ($photoHtml !== '' || $linkHtml !== ''): ?>
     <div class="card guest-card">
       <?php if ($photoHtml !== ''): ?>
         <h2>今日の写真</h2>
@@ -1309,8 +1380,8 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
           <?= $linkHtml ?>
         </div>
       <?php endif; ?>
+      <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
     </div>
-  <?php endif; ?>
 </section>
 <footer class="guest-footer">
   <a class="guest-app-link" href="<?= app_h(app_url('/')) ?>">
@@ -1376,7 +1447,7 @@ function render_guest_profile_screen(array $event, string $guestName, array $pho
     <div class="hero-profile">
       <img class="hero-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=420&q=80" alt="profile">
       <div>
-        <h2><?= app_h((string) $event['profile_display_name']) ?></h2>
+        <h2><?= app_h(app_guest_display_name($event)) ?></h2>
         <p class="lead"><?= app_h((string) ($event['profile_headline'] ?? '')) ?></p>
         <p><?= nl2br(app_h((string) ($event['profile_bio'] ?? ''))) ?></p>
       </div>

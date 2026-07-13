@@ -448,6 +448,27 @@ function app_fetch_profile_by_public_token(PDO $db, string $publicToken): ?array
     return $profile ?: null;
 }
 
+function app_fetch_profile_owner(PDO $db, int $profileId): ?array
+{
+    $stmt = $db->prepare(
+        'SELECT p.id AS profile_id,
+                p.display_name AS profile_display_name,
+                p.profile_name,
+                p.public_token AS profile_public_token,
+                u.id AS user_id,
+                u.name AS user_name,
+                u.email AS user_email
+         FROM profiles p
+         INNER JOIN users u ON u.id = p.user_id
+         WHERE p.id = :profile_id
+         LIMIT 1'
+    );
+    $stmt->execute(['profile_id' => $profileId]);
+    $row = $stmt->fetch();
+
+    return $row ?: null;
+}
+
 function app_fetch_profile_links(PDO $db, int $profileId): array
 {
     $stmt = $db->prepare(
@@ -805,6 +826,64 @@ function app_upsert_guest_visitor(PDO $db, string $token, string $name): void
         'viewer_token' => $token,
         'display_name' => $name,
     ]);
+}
+
+function app_store_guest_message(PDO $db, int $profileId, ?int $shareEventId, string $guestName, string $message, string $recipientEmail): void
+{
+    $stmt = $db->prepare(
+        'INSERT INTO guest_messages (profile_id, share_event_id, guest_name, message, recipient_email, created_at)
+         VALUES (:profile_id, :share_event_id, :guest_name, :message, :recipient_email, CURRENT_TIMESTAMP)'
+    );
+    $stmt->execute([
+        'profile_id' => $profileId,
+        'share_event_id' => $shareEventId,
+        'guest_name' => $guestName,
+        'message' => $message,
+        'recipient_email' => $recipientEmail,
+    ]);
+}
+
+function app_send_guest_message_notification(PDO $db, array $event, string $guestName, string $message): bool
+{
+    $profileId = (int) ($event['profile_id'] ?? 0);
+    if ($profileId <= 0) {
+        return false;
+    }
+
+    $owner = app_fetch_profile_owner($db, $profileId);
+    $recipientEmail = trim((string) ($owner['user_email'] ?? ''));
+    if ($recipientEmail === '') {
+        return false;
+    }
+
+    $profileDisplayName = trim((string) ($event['profile_display_name'] ?? $owner['profile_display_name'] ?? $owner['profile_name'] ?? ''));
+    $shareToken = trim((string) ($event['public_token'] ?? ''));
+    $shareUrl = $shareToken !== '' ? app_url('/s/' . $shareToken) : app_url('/dashboard');
+    $subject = '【1G1A】' . ($profileDisplayName !== '' ? $profileDisplayName : 'プロフィール') . ' にメッセージ';
+    if (function_exists('mb_encode_mimeheader')) {
+        $subject = mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
+    }
+
+    $body = implode("\r\n", [
+        '1G1A に新しいメッセージが届きました。',
+        '',
+        '送信者名: ' . $guestName,
+        'メッセージ: ' . $message,
+        '送信先: ' . ($profileDisplayName !== '' ? $profileDisplayName : '(unknown profile)'),
+        '送信URL: ' . $shareUrl,
+        '送信時刻: ' . gmdate('Y-m-d H:i:s') . ' UTC',
+    ]);
+
+    $fromAddress = (string) app_env('MAIL_FROM_ADDRESS', 'no-reply@1g1a.local');
+    $fromName = (string) app_env('MAIL_FROM_NAME', '1G1A');
+    $headers = [
+        'From: ' . $fromName . ' <' . $fromAddress . '>',
+        'Reply-To: ' . $fromAddress,
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: 8bit',
+    ];
+
+    return mail($recipientEmail, $subject, $body, implode("\r\n", $headers));
 }
 
 function app_log_share_access(PDO $db, int $eventId, int $profileId, ?string $viewerToken): void
