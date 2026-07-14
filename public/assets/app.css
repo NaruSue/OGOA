@@ -68,8 +68,11 @@ a:hover { text-decoration: underline; }
 }
 
 .brand-text { font-size: 1rem; }
-.nav { display: flex; gap: 14px; flex-wrap: wrap; }
+.nav { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .nav a { color: var(--muted); font-weight: 600; }
+.icon-nav { width: 46px; height: 46px; display: inline-grid; place-items: center; border-radius: 16px; background: linear-gradient(135deg, var(--accent), #123d77); color: #fff; box-shadow: 0 10px 18px rgba(15, 91, 102, 0.16); }
+.icon-nav:hover { text-decoration: none; transform: translateY(-1px); }
+.icon-nav i { font-size: 1.1rem; line-height: 1; color: #fff; }
 .user-chip {
   display: inline-flex;
   align-items: center;
