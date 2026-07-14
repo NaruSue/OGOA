@@ -1196,6 +1196,7 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
     echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">';
     echo '<link rel="manifest" href="' . app_h(app_url('/manifest.webmanifest')) . '">';
+    echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">';
     echo '<meta name="theme-color" content="#0f5b66">';
     echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css?v=' . $cssVersion)) . '">';
     echo '<script defer src="' . app_h(app_url('/assets/app.js?v=' . $jsVersion)) . '"></script>';
@@ -1206,11 +1207,10 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<a class="brand" href="' . app_h(app_url('/')) . '"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span></a>';
         echo '<nav class="nav">';
         if ($user) {
-            echo '<a href="' . app_h(app_url('/dashboard')) . '">Home</a>';
-            echo '<a href="' . app_h(app_url('/logout')) . '">Logout</a>';
+            echo '<a class="icon-nav" href="' . app_h(app_url('/dashboard')) . '" aria-label="Home" title="Home"><i class="fa-solid fa-house" aria-hidden="true"></i></a>';
+            echo '<a class="icon-nav" href="' . app_h(app_url('/logout')) . '" aria-label="Logout" title="Logout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></a>';
         } else {
-            echo '<a href="' . app_h(app_url('/')) . '">Home</a>';
-            echo '<a href="' . app_h(app_url('/login')) . '">Login</a>';
+            echo "<a class=\"icon-nav\" href=\"/\" aria-label=\"Home\" title=\"Home\"><i class=\"fa-solid fa-house\" aria-hidden=\"true\"></i></a>";
         }
         echo '</nav>';
         if ($user) {
