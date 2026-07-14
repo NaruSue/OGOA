@@ -235,7 +235,7 @@
 
       if (!isPublish) {
         if (status) {
-          status.textContent = '下書きを保存しました。公開ボタンで QR を作成できます。';
+          status.textContent = '下書きを保存しました。QR作成ボタンでQRを作成できます。';
         }
         return;
       }

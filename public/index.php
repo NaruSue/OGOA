@@ -156,11 +156,6 @@ if (preg_match('#^/s/([A-Za-z0-9_-]{12,80})$#', $path, $matches) === 1) {
     exit;
 }
 
-if (preg_match('#^/p/([A-Za-z0-9_-]{12,80})$#', $path, $matches) === 1) {
-    render_public_profile($db, (string) $matches[1]);
-    exit;
-}
-
 http_response_code(404);
 app_render('Not found', '<section class="page narrow"><div class="card"><h1>ページが見つかりません</h1></div></section>');
 
@@ -305,7 +300,6 @@ function render_home(): string
     <p class="lead">1G1A は、会った人に合わせて共有プロフィールを選び、メッセージや写真と一緒に QR で渡すためのサービスです。</p>
     <div class="hero-actions">
       <a class="button primary" href="<?= app_h(app_url('/login')) ?>">ログイン</a>
-      <a class="button secondary" href="<?= app_h(app_url('/p/demo-preview-1g1a')) ?>">デモを見る</a>
     </div>
   </div>
   <div class="hero-card">
@@ -341,7 +335,6 @@ function render_home_simple(): string
     <p class="lead">1G1Aは、会った相手にプロフィールや連絡先をあとから見てもらうための共有アプリです。場面に合わせたプロフィールを選んで、メッセージや写真と一緒にQRで渡せます。</p>
     <div class="hero-actions">
       <a class="button primary" href="<?= app_h(app_url('/login')) ?>">ログインして使う</a>
-      <a class="button secondary" href="<?= app_h(app_url('/p/demo-preview-1g1a')) ?>">デモを見る</a>
     </div>
   </div>
   <div class="hero-card">
@@ -430,7 +423,7 @@ function render_dashboard(?PDO $db): void
         $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' - ' . app_h((string) $profile['display_name']) . '</option>';
         $recentEvents = app_fetch_recent_events($db, $profileId, 2);
         $eventInfo = $recentEvents !== [] ? count($recentEvents) . ' 件の共有イベント' : 'まだ共有イベントはありません';
-        $profileCards .= '<article class="list-card"><div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '公開中' : '非公開') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId)) . '">詳細</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
+        $profileCards .= '<article class="list-card"><div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId)) . '">詳細</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
     }
 
     $eventPageSize = 5;
@@ -459,7 +452,7 @@ function render_dashboard(?PDO $db): void
         } elseif (strlen($message) > 72) {
             $message = substr($message, 0, 69) . '...';
         }
-        $eventRows .= '<a class="event-row" href="' . app_h(app_url('/s/' . (string) $event['public_token'])) . '">';
+        $eventRows .= '<a class="event-row" href="' . app_h(app_url('/profiles/' . (int) $event['profile_id'] . '/qr?event=' . (int) $event['id'])) . '">';
         $eventRows .= '<span class="event-row-main"><span class="event-row-meta"><strong>' . app_h($profileName) . '</strong><time datetime="' . app_h((string) ($event['created_at'] ?? '')) . '">' . app_h($eventDate) . '</time></span>';
         $eventRows .= '<p>' . app_h($message) . '</p></span></a>';
     }
@@ -501,7 +494,7 @@ function render_dashboard(?PDO $db): void
         </select>
       </label>
       <div class="launch-actions">
-        <button class="button primary" type="submit" data-publish="1">QRを公開</button>
+        <button class="button primary" type="submit" data-publish="1">QRを作成</button>
         <button class="button secondary" type="submit">下書きを保存</button>
       </div>
       <div class="draft-banner" id="draft-status"><?= app_h($statusLine) ?></div>
@@ -561,7 +554,7 @@ function render_dashboard(?PDO $db): void
   <div class="card">
     <details class="help-accordion">
       <summary>使い方</summary>
-      <p><?= app_h($profileHint) ?> 必要ならメッセージと写真を追加して、QRを公開します。</p>
+      <p><?= app_h($profileHint) ?> 必要ならメッセージと写真を追加して、QRを作成します。</p>
     </details>
     <p class="eyebrow">Account profile</p>
     <h2>アカウントプロフィール</h2>
@@ -624,7 +617,7 @@ function render_account(?PDO $db, string $method): void
       <label>自己紹介
         <textarea name="bio" rows="5" maxlength="1000"><?= app_h($bio) ?></textarea>
       </label>
-      <div class="notice">メールアドレスや Google 情報は公開ページには出ません。</div>
+      <div class="notice">メールアドレスや Google 情報はゲスト画面には出ません。</div>
       <button class="button primary" type="submit">保存する</button>
     </form>
   </div>
@@ -731,13 +724,13 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
   <div class="card">
     <p class="eyebrow">Share profile</p>
     <h1><?= app_h($title) ?></h1>
-    <p>1アカウントで複数持てる公開プロフィールです。用途ごとに分けて使えます。</p>
+    <p>1アカウントで複数持てる共有プロフィールです。用途ごとに分けて使えます。</p>
     <form method="post" enctype="multipart/form-data" class="form">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <label>共有プロフィール名
         <input name="profile_name" required maxlength="120" value="<?= app_h($profileName) ?>" placeholder="仕事用 / 友人用 / 旅先用">
       </label>
-      <label>公開表示名
+      <label>表示名
         <input name="display_name" required maxlength="120" value="<?= app_h($displayName) ?>">
       </label>
       <label class="upload-field">プロフィール画像 <span class="optional">写真を選択、またはカメラで撮影</span>
@@ -765,7 +758,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         <?php endforeach; ?>
       </div>
       <label class="checkbox">
-        <input type="checkbox" name="is_public" value="1"<?= $checked ?>> 公開する
+        <input type="checkbox" name="is_public" value="1"<?= $checked ?>> 利用する
       </label>
       <button class="button primary" type="submit"><?= app_h($button) ?></button>
     </form>
@@ -915,7 +908,6 @@ function render_profile_detail(?PDO $db, int $profileId): void
         }
         $eventItems .= '</article>';
     }
-    $shareUrl = app_h(app_url('/p/' . (string) $profile['public_token']));
     ob_start();
     ?>
 <section class="page">
@@ -932,10 +924,9 @@ function render_profile_detail(?PDO $db, int $profileId): void
   </div>
   <div class="two-col">
     <div class="card">
-      <h2>公開内容</h2>
+      <h2>表示内容</h2>
       <p><?= nl2br(app_h((string) ($profile['bio'] ?? ''))) ?></p>
-      <p><strong>公開URL:</strong> <a href="<?= $shareUrl ?>"><?= $shareUrl ?></a></p>
-      <p><strong>状態:</strong> <?= (bool) $profile['is_public'] ? '公開中' : '非公開' ?></p>
+      <p><strong>利用状態:</strong> <?= (bool) $profile['is_public'] ? '利用中' : '停止中' ?></p>
     </div>
     <div class="card">
       <h2>SNS・リンク</h2>
@@ -1003,12 +994,6 @@ function render_profile_qr(?PDO $db, int $profileId): void
     $token = $requestedToken !== '' ? $requestedToken : ($event ? (string) $event['public_token'] : '');
     $shareUrl = $token !== '' ? app_url('/s/' . $token) : app_url('/dashboard');
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=' . rawurlencode($shareUrl);
-    $noticeJa = $draftMode && $event === null
-        ? 'まだ通信が復帰していないので、下書きQRを表示しています。復帰後に自動で公開されます。'
-        : 'このQRは写真で撮っておくと、あとからアクセスできます。';
-    $noticeEn = $draftMode && $event === null
-        ? 'This is a draft QR while the connection is weak. It will be published automatically after sync.'
-        : 'Please take a photo of this QR so you can visit my profile later.';
     $noticeJa = $draftMode && $event === null
         ? '通信できない時は、この画面を写真で撮っておいてください。あとでQRからアクセスできます。'
         : '私のプロフィールと連絡先です。この画面を写真で撮って、あとでQRからアクセスしてください。';
@@ -1094,8 +1079,8 @@ function handle_share_event_save(?PDO $db, bool $syncMode): void
         if (isset($_SERVER['HTTP_ACCEPT']) && str_contains((string) $_SERVER['HTTP_ACCEPT'], 'application/json')) {
             app_json(['ok' => true, 'event_id' => (int) $event['id'], 'public_token' => (string) $event['public_token'], 'public_url' => $publicUrl]);
         }
-        app_flash($syncMode ? '共有イベントを同期しました。' : 'QR を公開しました。');
-        app_redirect('/s/' . (string) $event['public_token']);
+        app_flash($syncMode ? '共有イベントを同期しました。' : 'QR を作成しました。');
+        app_redirect('/profiles/' . (int) $event['profile_id'] . '/qr?event=' . (int) $event['id']);
     } catch (Throwable $e) {
         if (isset($_SERVER['HTTP_ACCEPT']) && str_contains((string) $_SERVER['HTTP_ACCEPT'], 'application/json')) {
             app_json(['ok' => false, 'error' => $e->getMessage()], 422);
@@ -1271,75 +1256,6 @@ function render_share_event(?PDO $db, string $token, string $method): void
     $photos = app_fetch_share_event_photos($db, (int) $event['id']);
     $links = app_fetch_profile_links($db, (int) $event['profile_id']);
     app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $guestName, $photos, $links), ['chrome' => false]);
-}
-
-function render_public_profile(?PDO $db, string $token): void
-{
-    if ($db === null) {
-        app_render('Public profile', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
-        return;
-    }
-
-    $profile = app_fetch_profile_by_public_token($db, $token);
-    if (!$profile && $token === 'demo-preview-1g1a') {
-        $demoUser = app_demo_user($db);
-        $profile = app_demo_profile($db, (int) $demoUser['id']);
-    }
-    if (!$profile) {
-        http_response_code(404);
-        app_render('Not found', '<section class="page narrow"><div class="card"><h1>公開プロフィールが見つかりません</h1></div></section>');
-        return;
-    }
-
-    $links = app_fetch_profile_links($db, (int) $profile['id']);
-    $events = app_fetch_recent_events($db, (int) $profile['id'], 5);
-    $eventHtml = '';
-    foreach ($events as $event) {
-        $eventHtml .= '<article class="timeline-item"><p class="eyebrow">Share event</p><p>' . nl2br(app_h((string) ($event['body'] ?? ''))) . '</p></article>';
-    }
-    $linkHtml = '';
-    foreach ($links as $link) {
-        $linkHtml .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
-    }
-
-    ob_start();
-    ?>
-<section class="public-hero">
-  <div class="hero-copy">
-    <p class="eyebrow">Shared page</p>
-    <h1><?= app_h((string) $profile['display_name']) ?></h1>
-    <p class="lead"><?= app_h((string) ($profile['headline'] ?? '')) ?></p>
-    <p><?= nl2br(app_h((string) ($profile['bio'] ?? ''))) ?></p>
-  </div>
-  <div class="hero-card">
-    <div class="guest-card">
-      <p class="eyebrow">Public profile</p>
-      <h2>共有プロフィール</h2>
-      <p>相手に合わせて見せたい情報だけをまとめた公開ページです。</p>
-    </div>
-  </div>
-</section>
-<section class="dashboard-grid">
-  <div class="card">
-    <h2>SNS・リンク</h2>
-    <div class="social-list">
-      <?= $linkHtml !== '' ? $linkHtml : '<div class="empty">まだリンクがありません。</div>' ?>
-    </div>
-  </div>
-  <div class="card">
-    <h2>最近の共有イベント</h2>
-    <div class="timeline">
-      <?= $eventHtml !== '' ? $eventHtml : '<div class="empty">まだ共有イベントがありません。</div>' ?>
-    </div>
-  </div>
-</section>
-<section class="page narrow">
-  <div class="card">
-    <p><a href="<?= app_h(app_url('/login')) ?>">管理画面へ</a></p>
-  </div>
-</section>
-    <?php
-    app_render((string) $profile['display_name'], (string) ob_get_clean());
 }
 
 function render_preparing_page(string $token): string
