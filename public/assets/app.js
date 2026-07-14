@@ -235,7 +235,7 @@
 
       if (!isPublish) {
         if (status) {
-          status.textContent = '下書きを保存しました。QR作成ボタンでQRを作成できます。';
+          status.textContent = '一時保存しました。QR作成ボタンでQRを作成できます。';
         }
         return;
       }
@@ -255,7 +255,7 @@
       }
 
       if (status) {
-        status.textContent = '通信しにくいため下書きを保存しました。復帰後に同期します。';
+        status.textContent = '通信しにくいため一時保存しました。復帰後に同期します。';
       }
       window.location.href = '/profiles/' + profileId + '/qr?token=' + encodeURIComponent(publicToken) + '&draft=1';
     });

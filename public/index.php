@@ -249,7 +249,7 @@ function app_upsert_user_from_google(PDO $db, array $profile): array
             'UPDATE users
              SET email = :email,
                  name = :name,
-                 avatar_url = :avatar_url,
+                 avatar_url = COALESCE(NULLIF(avatar_url, \'\'), :avatar_url),
                  account_display_name = COALESCE(account_display_name, :display_name),
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = :id
@@ -356,7 +356,6 @@ function render_home_simple(): string
       </div>
     </div>
   </div>
-  <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
 </section>
     <?php
     return (string) ob_get_clean();
@@ -420,10 +419,11 @@ function render_dashboard(?PDO $db): void
     $profileCards = '';
     foreach ($profiles as $index => $profile) {
         $profileId = (int) $profile['id'];
+        $profileAvatarUrl = app_profile_display_avatar_url($profile, $user);
         $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' - ' . app_h((string) $profile['display_name']) . '</option>';
         $recentEvents = app_fetch_recent_events($db, $profileId, 2);
         $eventInfo = $recentEvents !== [] ? count($recentEvents) . ' 件の共有イベント' : 'まだ共有イベントはありません';
-        $profileCards .= '<article class="list-card"><div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId)) . '">詳細</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
+        $profileCards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($profileAvatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId)) . '">詳細</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
     }
 
     $eventPageSize = 5;
@@ -495,7 +495,6 @@ function render_dashboard(?PDO $db): void
       </label>
       <div class="launch-actions">
         <button class="button primary" type="submit" data-publish="1">QRを作成</button>
-        <button class="button secondary" type="submit">下書きを保存</button>
       </div>
       <div class="draft-banner" id="draft-status"><?= app_h($statusLine) ?></div>
     </form>
@@ -584,15 +583,23 @@ function render_account(?PDO $db, string $method): void
     if ($method === 'POST') {
         app_require_csrf();
         $displayName = trim((string) ($_POST['display_name'] ?? ''));
-        $bio = trim((string) ($_POST['bio'] ?? ''));
-        if ($displayName === '' || mb_strlen($displayName) > 120 || mb_strlen($bio) > 1000) {
+        $avatarUrl = trim((string) ($user['avatar_url'] ?? ''));
+        if (isset($_POST['use_default_avatar']) && $_POST['use_default_avatar'] === '1') {
+            $avatarUrl = '';
+        }
+        $avatarUpload = $_FILES['avatar_upload'] ?? null;
+        if (is_array($avatarUpload) && ($avatarUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $storedAvatar = app_store_uploaded_photo($avatarUpload, 'account_avatar');
+            $avatarUrl = '/media/' . basename((string) $storedAvatar['storage_path']);
+        }
+        if ($displayName === '' || mb_strlen($displayName) > 120) {
             app_flash('入力内容を確認してください。');
             app_redirect('/account');
         }
-        $stmt = $db->prepare('UPDATE users SET account_display_name = :display_name, account_bio = :bio, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
+        $stmt = $db->prepare('UPDATE users SET account_display_name = :display_name, avatar_url = :avatar_url, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
             'display_name' => $displayName,
-            'bio' => $bio !== '' ? $bio : null,
+            'avatar_url' => $avatarUrl !== '' ? $avatarUrl : null,
             'id' => (int) $user['id'],
         ]);
         app_flash('アカウントプロフィールを更新しました。');
@@ -600,24 +607,46 @@ function render_account(?PDO $db, string $method): void
     }
 
     $displayName = trim((string) ($user['account_display_name'] ?? '')) ?: (string) $user['name'];
-    $bio = (string) ($user['account_bio'] ?? '');
+    $email = (string) ($user['email'] ?? '');
+    $avatarUrl = app_account_avatar_url($user);
     $csrf = app_h(app_csrf_token());
     ob_start();
     ?>
 <section class="page narrow">
   <div class="card">
     <p class="eyebrow">Account profile</p>
-    <h1>アカウントプロフィール</h1>
-    <p>アカウントにひとつだけある基本情報です。共有プロフィールの初期値として使います。</p>
-    <form method="post" class="form">
+    <h1>アカウント情報</h1>
+    <p>ヘッダや共有プロフィール画像が未設定のときに使う、アカウント共通の表示情報です。</p>
+    <div class="account-summary">
+      <?= app_render_profile_avatar($avatarUrl, $displayName) ?>
+      <div>
+        <h2><?= app_h($displayName) ?></h2>
+        <p class="muted"><?= app_h($email) ?></p>
+      </div>
+    </div>
+    <form method="post" enctype="multipart/form-data" class="form">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
-      <label>表示名
+      <label>アカウントの名称
         <input name="display_name" required maxlength="120" value="<?= app_h($displayName) ?>">
       </label>
-      <label>自己紹介
-        <textarea name="bio" rows="5" maxlength="1000"><?= app_h($bio) ?></textarea>
+      <label class="upload-field">アカウントプロフィール画像 <span class="optional">未設定ならデフォルト画像を使います</span>
+        <span class="avatar-upload-preview">
+          <?= app_render_profile_avatar($avatarUrl, $displayName, 'avatar-preview') ?>
+          <span>共有プロフィール画像が未設定のときにも、この画像を表示します。</span>
+        </span>
+        <input type="file" name="avatar_upload" accept="image/jpeg,image/png,image/webp,image/gif">
       </label>
-      <div class="notice">メールアドレスや Google 情報はゲスト画面には出ません。</div>
+      <label class="checkbox">
+        <input type="checkbox" name="use_default_avatar" value="1"> デフォルト画像に戻す
+      </label>
+      <div class="form-block">
+        <h2>Google認証情報</h2>
+        <p class="muted">メールアドレスは確認用です。この画面では変更できません。</p>
+        <label>メールアドレス
+          <input value="<?= app_h($email) ?>" readonly>
+        </label>
+      </div>
+      <div class="notice">メールアドレスや Google ID はゲスト画面には出ません。</div>
       <button class="button primary" type="submit">保存する</button>
     </form>
   </div>
@@ -650,6 +679,9 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         $profileName = trim((string) ($_POST['profile_name'] ?? ''));
         $displayName = trim((string) ($_POST['display_name'] ?? ''));
         $avatarUrl = $profile ? trim((string) ($profile['avatar_url'] ?? '')) : '';
+        if (isset($_POST['clear_avatar']) && $_POST['clear_avatar'] === '1') {
+            $avatarUrl = '';
+        }
         $avatarUpload = $_FILES['avatar_upload'] ?? null;
         if (is_array($avatarUpload) && ($avatarUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
             $storedAvatar = app_store_uploaded_photo($avatarUpload, 'profile_avatar');
@@ -710,6 +742,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     $profileName = $profile ? (string) $profile['profile_name'] : '';
     $displayName = $profile ? (string) $profile['display_name'] : $defaultDisplay;
     $avatarUrl = $profile ? (string) ($profile['avatar_url'] ?? '') : '';
+    $displayAvatarUrl = app_profile_display_avatar_url($profile ?: [], $user);
     $headline = $profile ? (string) ($profile['headline'] ?? '') : '';
     $bio = $profile ? (string) ($profile['bio'] ?? '') : '';
     $checked = $profile === null || (bool) $profile['is_public'] ? ' checked' : '';
@@ -734,14 +767,17 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         <input name="display_name" required maxlength="120" value="<?= app_h($displayName) ?>">
       </label>
       <label class="upload-field">プロフィール画像 <span class="optional">写真を選択、またはカメラで撮影</span>
-        <?php if ($avatarUrl !== ''): ?>
-          <span class="avatar-upload-preview">
-            <?= app_render_profile_avatar($avatarUrl, $displayName, 'avatar-preview') ?>
-            <span>登録済みの画像があります。変更する場合だけ新しい写真を選んでください。</span>
-          </span>
-        <?php endif; ?>
+        <span class="avatar-upload-preview">
+          <?= app_render_profile_avatar($displayAvatarUrl, $displayName, 'avatar-preview') ?>
+          <span><?= $avatarUrl !== '' ? '共有プロフィール画像が設定されています。' : '共有プロフィール画像が未設定のため、アカウントプロフィール画像を表示しています。' ?></span>
+        </span>
         <input type="file" name="avatar_upload" accept="image/jpeg,image/png,image/webp,image/gif">
       </label>
+      <?php if ($avatarUrl !== ''): ?>
+        <label class="checkbox">
+          <input type="checkbox" name="clear_avatar" value="1"> 共有プロフィール画像を削除してアカウント画像を使う
+        </label>
+      <?php endif; ?>
       <label>見出し
         <input name="headline" maxlength="160" value="<?= app_h($headline) ?>" placeholder="旅と写真が好きです">
       </label>
@@ -889,6 +925,7 @@ function render_profile_detail(?PDO $db, int $profileId): void
 
     $links = app_fetch_profile_links($db, $profileId);
     $events = app_fetch_recent_events($db, $profileId, 6);
+    $avatarUrl = app_profile_display_avatar_url($profile, $user);
     $linkItems = '';
     foreach ($links as $link) {
         $linkItems .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
@@ -925,6 +962,13 @@ function render_profile_detail(?PDO $db, int $profileId): void
   <div class="two-col">
     <div class="card">
       <h2>表示内容</h2>
+      <div class="hero-profile compact-profile">
+        <?= app_render_profile_avatar($avatarUrl, (string) $profile['display_name']) ?>
+        <div>
+          <h3><?= app_h((string) $profile['display_name']) ?></h3>
+          <p class="muted"><?= trim((string) ($profile['avatar_url'] ?? '')) !== '' ? '共有プロフィール画像を使用中' : 'アカウントプロフィール画像を使用中' ?></p>
+        </div>
+      </div>
       <p><?= nl2br(app_h((string) ($profile['bio'] ?? ''))) ?></p>
       <p><strong>利用状態:</strong> <?= (bool) $profile['is_public'] ? '利用中' : '停止中' ?></p>
     </div>
@@ -971,7 +1015,15 @@ function render_profile_qr(?PDO $db, int $profileId): void
 
     $event = null;
     if ($requestedEventId > 0) {
-        $stmt = $db->prepare('SELECT se.*, p.user_id, p.display_name AS profile_display_name, p.headline AS profile_headline, p.bio AS profile_bio FROM share_events se INNER JOIN profiles p ON p.id = se.profile_id WHERE se.id = :id AND p.id = :profile_id LIMIT 1');
+        $stmt = $db->prepare(
+            'SELECT se.*, p.user_id, p.display_name AS profile_display_name, p.headline AS profile_headline, p.bio AS profile_bio, p.avatar_url AS profile_avatar_url,
+                    u.avatar_url AS account_avatar_url
+             FROM share_events se
+             INNER JOIN profiles p ON p.id = se.profile_id
+             INNER JOIN users u ON u.id = p.user_id
+             WHERE se.id = :id AND p.id = :profile_id
+             LIMIT 1'
+        );
         $stmt->execute([
             'id' => $requestedEventId,
             'profile_id' => $profileId,
@@ -994,6 +1046,7 @@ function render_profile_qr(?PDO $db, int $profileId): void
     $token = $requestedToken !== '' ? $requestedToken : ($event ? (string) $event['public_token'] : '');
     $shareUrl = $token !== '' ? app_url('/s/' . $token) : app_url('/dashboard');
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=' . rawurlencode($shareUrl);
+    $avatarUrl = app_profile_display_avatar_url($profile, $user);
     $noticeJa = $draftMode && $event === null
         ? '通信できない時は、この画面を写真で撮っておいてください。あとでQRからアクセスできます。'
         : '私のプロフィールと連絡先です。この画面を写真で撮って、あとでQRからアクセスしてください。';
@@ -1001,16 +1054,23 @@ function render_profile_qr(?PDO $db, int $profileId): void
         ? 'If the connection is weak, please take a photo of this screen and visit from the QR later.'
         : 'My profile and contact links are here. Please take a photo of this screen and visit from the QR later.';
     $messageJa = trim((string) ($event['body'] ?? ''));
-    $messageEn = $messageJa !== ''
-        ? 'You can read my social links and message later from this QR.'
-        : '';
+    $photos = $event ? app_fetch_share_event_photos($db, (int) $event['id']) : [];
+    $photoHtml = '';
+    foreach ($photos as $photo) {
+        $photoHtml .= '<img src="' . app_h(app_url('/media/' . basename((string) $photo['storage_path']))) . '" alt="共有写真" loading="lazy">';
+    }
+    $hasLocation = $event !== null && $event['latitude'] !== null && $event['longitude'] !== null;
+    $locationStatus = $hasLocation ? '取得済み' : ($event ? '未取得' : '未同期');
+    $uploadStatus = $event ? (((string) ($event['status'] ?? 'ready')) === 'ready' ? 'アップロード済み' : '準備中') : '未アップロード';
+    $syncStatus = $draftMode && $event === null ? '同期待ち' : '同期済み';
     ob_start();
     ?>
-<section class="page narrow">
+<section class="page qr-page">
   <div class="card qr-card">
     <h1><?= app_h((string) $profile['display_name']) ?></h1>
     <div class="qr-frame">
       <img src="<?= $qrUrl ?>" alt="QR code">
+      <?= app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'qr-center-avatar') ?>
     </div>
     <?php if ($messageJa !== ''): ?>
     <div class="qr-message">
@@ -1025,6 +1085,32 @@ function render_profile_qr(?PDO $db, int $profileId): void
       <span>URL</span>
       <a href="<?= app_h($shareUrl) ?>"><?= app_h($shareUrl) ?></a>
     </div>
+  </div>
+  <div class="card qr-detail-card">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Event detail</p>
+        <h2>共有イベント内容</h2>
+      </div>
+      <span class="status-pill <?= $event ? 'public' : 'pending' ?>"><?= app_h($syncStatus) ?></span>
+    </div>
+    <div class="status-grid">
+      <div><span>アップロード</span><strong><?= app_h($uploadStatus) ?></strong></div>
+      <div><span>位置情報</span><strong><?= app_h($locationStatus) ?></strong></div>
+      <div><span>写真</span><strong><?= count($photos) ?>枚</strong></div>
+    </div>
+    <?php if ($messageJa !== ''): ?>
+      <div class="message-box">
+        <div class="message-head"><span class="guest-badge">共有メッセージ</span></div>
+        <p><?= nl2br(app_h($messageJa)) ?></p>
+      </div>
+    <?php endif; ?>
+    <?php if ($photoHtml !== ''): ?>
+      <h3>共有写真</h3>
+      <div class="photo-grid">
+        <?= $photoHtml ?>
+      </div>
+    <?php endif; ?>
   </div>
 </section>
     <?php
@@ -1129,12 +1215,17 @@ function serve_media(?PDO $db, string $filename): void
     if (!is_string($mimeType)) {
         $relativeUrl = '/media/' . $filename;
         $absoluteUrl = app_url($relativeUrl);
-        $profileStmt = $db->prepare('SELECT 1 FROM profiles WHERE avatar_url IN (:relative_url, :absolute_url) LIMIT 1');
-        $profileStmt->execute([
+        $avatarStmt = $db->prepare(
+            'SELECT 1 FROM profiles WHERE avatar_url IN (:relative_url, :absolute_url)
+             UNION
+             SELECT 1 FROM users WHERE avatar_url IN (:relative_url, :absolute_url)
+             LIMIT 1'
+        );
+        $avatarStmt->execute([
             'relative_url' => $relativeUrl,
             'absolute_url' => $absoluteUrl,
         ]);
-        if ($profileStmt->fetchColumn()) {
+        if ($avatarStmt->fetchColumn()) {
             $info = is_file($file) ? @getimagesize($file) : false;
             $mimeType = is_array($info) && isset($info['mime']) ? (string) $info['mime'] : false;
         }
@@ -1255,7 +1346,8 @@ function render_share_event(?PDO $db, string $token, string $method): void
     app_log_share_access($db, (int) $event['id'], (int) $event['profile_id'], $viewerToken);
     $photos = app_fetch_share_event_photos($db, (int) $event['id']);
     $links = app_fetch_profile_links($db, (int) $event['profile_id']);
-    app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $guestName, $photos, $links), ['chrome' => false]);
+    $messages = app_fetch_guest_messages($db, (int) $event['id'], $guestName);
+    app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $guestName, $photos, $links, $messages), ['chrome' => false]);
 }
 
 function render_preparing_page(string $token): string
@@ -1338,12 +1430,12 @@ function render_guest_message_box(string $token): string
     return (string) ob_get_clean();
 }
 
-function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links): string
+function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = []): string
 {
     $profileDisplayName = app_guest_display_name($event);
     $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
     $profileBio = trim((string) ($event['profile_bio'] ?? ''));
-    $profileAvatarUrl = trim((string) ($event['profile_avatar_url'] ?? ''));
+    $profileAvatarUrl = app_profile_display_avatar_url($event);
     $message = trim((string) ($event['body'] ?? ''));
 
     $photoHtml = '';
@@ -1354,6 +1446,32 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
     $linkHtml = '';
     foreach ($links as $link) {
         $linkHtml .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
+    }
+
+    $mapHtml = '';
+    $latitude = $event['latitude'] ?? null;
+    $longitude = $event['longitude'] ?? null;
+    if ($latitude !== null && $longitude !== null) {
+        $lat = (float) $latitude;
+        $lng = (float) $longitude;
+        $delta = 0.006;
+        $bbox = implode(',', [
+            $lng - $delta,
+            $lat - $delta,
+            $lng + $delta,
+            $lat + $delta,
+        ]);
+        $mapUrl = 'https://www.openstreetmap.org/export/embed.html?bbox=' . rawurlencode($bbox) . '&layer=mapnik&marker=' . rawurlencode($lat . ',' . $lng);
+        $mapAppUrl = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($lat . ',' . $lng);
+        $osmUrl = 'https://www.openstreetmap.org/?mlat=' . rawurlencode((string) $lat) . '&mlon=' . rawurlencode((string) $lng) . '#map=16/' . rawurlencode((string) $lat) . '/' . rawurlencode((string) $lng);
+        $mapHtml = '<section class="guest-map-block"><h3>場所</h3><div class="guest-map-frame"><iframe src="' . app_h($mapUrl) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="地図"></iframe></div><div class="map-actions"><a class="button primary" href="' . app_h($mapAppUrl) . '" target="_blank" rel="noreferrer">地図アプリで開く</a><a class="button secondary map-browser-link" href="' . app_h($osmUrl) . '" target="_blank" rel="noreferrer">OpenStreetMapで見る</a></div><p class="muted">地図データ © OpenStreetMap contributors</p></section>';
+    }
+
+    $messageHistoryHtml = '';
+    foreach ($messages as $sentMessage) {
+        $sentAt = strtotime((string) ($sentMessage['created_at'] ?? ''));
+        $sentLabel = $sentAt !== false ? date('Y年n月j日 H:i', $sentAt) : '';
+        $messageHistoryHtml .= '<article class="guest-sent-message"><time>' . app_h($sentLabel) . '</time><p>' . app_h((string) ($sentMessage['message'] ?? '')) . '</p></article>';
     }
 
     ob_start();
@@ -1380,6 +1498,7 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
         <?= $photoHtml ?>
       </div>
     <?php endif; ?>
+    <?= $mapHtml ?>
   </section>
 
   <section class="card guest-card guest-profile-card">
@@ -1410,6 +1529,12 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
   <section class="card guest-card guest-message-section">
     <h2>ひとことメッセージ</h2>
     <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
+    <?php if ($messageHistoryHtml !== ''): ?>
+      <div class="guest-sent-list">
+        <h3>送信済み</h3>
+        <?= $messageHistoryHtml ?>
+      </div>
+    <?php endif; ?>
   </section>
 </section>
 <footer class="guest-footer">

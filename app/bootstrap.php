@@ -538,9 +538,11 @@ function app_fetch_dashboard_events(PDO $db, int $userId, int $limit = 5, int $o
 function app_fetch_share_event_by_token(PDO $db, string $token): ?array
 {
     $stmt = $db->prepare(
-        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name, p.headline AS profile_headline, p.bio AS profile_bio, p.is_public, p.user_id, p.avatar_url AS profile_avatar_url
+        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name, p.headline AS profile_headline, p.bio AS profile_bio, p.is_public, p.user_id, p.avatar_url AS profile_avatar_url,
+                u.avatar_url AS account_avatar_url, u.account_display_name AS account_display_name, u.name AS account_name
          FROM share_events se
          INNER JOIN profiles p ON p.id = se.profile_id
+         INNER JOIN users u ON u.id = p.user_id
          WHERE se.public_token = :token
          LIMIT 1'
     );
@@ -558,6 +560,46 @@ function app_fetch_share_event_photos(PDO $db, int $eventId): array
     return $stmt->fetchAll() ?: [];
 }
 
+function app_default_avatar_url(string $seed): string
+{
+    $index = (abs((int) crc32($seed !== '' ? $seed : '1g1a')) % 10) + 1;
+
+    return app_url('/assets/default-avatar-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.svg');
+}
+
+function app_account_avatar_url(array $user): string
+{
+    $avatarUrl = trim((string) ($user['avatar_url'] ?? ''));
+    if ($avatarUrl !== '') {
+        return $avatarUrl;
+    }
+
+    $seed = (string) ($user['id'] ?? $user['email'] ?? $user['name'] ?? '1g1a');
+
+    return app_default_avatar_url($seed);
+}
+
+function app_profile_display_avatar_url(array $profileOrEvent, ?array $user = null): string
+{
+    $profileAvatarUrl = trim((string) ($profileOrEvent['avatar_url'] ?? $profileOrEvent['profile_avatar_url'] ?? ''));
+    if ($profileAvatarUrl !== '') {
+        return $profileAvatarUrl;
+    }
+
+    if ($user !== null) {
+        return app_account_avatar_url($user);
+    }
+
+    $accountAvatarUrl = trim((string) ($profileOrEvent['account_avatar_url'] ?? ''));
+    if ($accountAvatarUrl !== '') {
+        return $accountAvatarUrl;
+    }
+
+    $seed = (string) ($profileOrEvent['user_id'] ?? $profileOrEvent['profile_id'] ?? $profileOrEvent['public_token'] ?? '1g1a');
+
+    return app_default_avatar_url($seed);
+}
+
 function app_render_profile_avatar(?string $avatarUrl, string $label, string $className = 'hero-avatar'): string
 {
     $avatarUrl = trim((string) $avatarUrl);
@@ -565,7 +607,12 @@ function app_render_profile_avatar(?string $avatarUrl, string $label, string $cl
     $fallback = $safeLabel !== '' ? (function_exists('mb_substr') ? mb_substr($safeLabel, 0, 2, 'UTF-8') : substr($safeLabel, 0, 2)) : '1G';
 
     if ($avatarUrl !== '') {
-        $avatarSize = $className === 'avatar-preview' ? 112 : 140;
+        $avatarSize = match ($className) {
+            'avatar-preview' => 112,
+            'avatar-mini' => 44,
+            'qr-center-avatar' => 48,
+            default => 140,
+        };
 
         return '<img class="' . app_h($className) . '" src="' . app_h($avatarUrl) . '" alt="' . app_h($safeLabel !== '' ? $safeLabel : 'profile') . '" width="' . $avatarSize . '" height="' . $avatarSize . '">';
     }
@@ -894,6 +941,23 @@ function app_store_guest_message(PDO $db, int $profileId, ?int $shareEventId, st
     ]);
 }
 
+function app_fetch_guest_messages(PDO $db, int $shareEventId, string $guestName, int $limit = 10): array
+{
+    $stmt = $db->prepare(
+        'SELECT guest_name, message, created_at
+         FROM guest_messages
+         WHERE share_event_id = :share_event_id AND guest_name = :guest_name
+         ORDER BY created_at DESC, id DESC
+         LIMIT :limit'
+    );
+    $stmt->bindValue(':share_event_id', $shareEventId, PDO::PARAM_INT);
+    $stmt->bindValue(':guest_name', $guestName);
+    $stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll() ?: [];
+}
+
 function app_send_guest_message_notification(PDO $db, array $event, string $guestName, string $message): bool
 {
     $profileId = (int) ($event['profile_id'] ?? 0);
@@ -990,9 +1054,11 @@ function app_touch_share_event_first_access(PDO $db, int $eventId): ?array
     $stmt = $db->prepare(
         'SELECT se.*, p.display_name AS profile_display_name, p.profile_name,
                 p.headline AS profile_headline, p.bio AS profile_bio,
-                p.is_public, p.user_id, p.avatar_url AS profile_avatar_url
+                p.is_public, p.user_id, p.avatar_url AS profile_avatar_url,
+                u.avatar_url AS account_avatar_url, u.account_display_name AS account_display_name, u.name AS account_name
          FROM share_events se
          INNER JOIN profiles p ON p.id = se.profile_id
+         INNER JOIN users u ON u.id = p.user_id
          WHERE se.id = :id
          LIMIT 1'
     );
@@ -1082,7 +1148,8 @@ function app_render(string $title, string $body, array $context = []): void
         }
         echo '</nav>';
         if ($user) {
-            echo '<div class="user-chip">' . app_h((string) ($user['account_display_name'] ?? $user['name'] ?? 'User')) . '</div>';
+            $accountName = (string) ($user['account_display_name'] ?? $user['name'] ?? 'User');
+            echo '<a class="user-chip" href="' . app_h(app_url('/account')) . '">' . app_render_profile_avatar(app_account_avatar_url($user), $accountName, 'avatar-mini') . '<span>' . app_h($accountName) . '</span></a>';
         }
         echo '</header>';
     }
