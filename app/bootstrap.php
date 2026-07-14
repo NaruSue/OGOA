@@ -907,32 +907,57 @@ function app_valid_guest_name(string $name): bool
     return $name !== '' && preg_match('/^[\p{L}\p{N}\p{P}\p{S}\p{Zs}]{1,40}$/u', $name) === 1;
 }
 
-function app_guest_token_from_cookie(): ?string
+function app_guest_identity_cookie_suffix(string $shareEventToken): string
 {
-    $token = $_COOKIE['1g1a_guest_token'] ?? null;
+    return sha1($shareEventToken);
+}
+
+function app_guest_token_from_cookie(string $shareEventToken): ?string
+{
+    $token = $_COOKIE['1g1a_guest_token_' . app_guest_identity_cookie_suffix($shareEventToken)] ?? null;
 
     return is_string($token) && trim($token) !== '' ? trim($token) : null;
 }
 
-function app_guest_name_from_cookie(): ?string
+function app_guest_name_from_cookie(string $shareEventToken): ?string
 {
-    $name = $_COOKIE['1g1a_guest_name'] ?? null;
+    $name = $_COOKIE['1g1a_guest_name_' . app_guest_identity_cookie_suffix($shareEventToken)] ?? null;
 
     return is_string($name) && trim($name) !== '' ? trim($name) : null;
 }
 
-function app_set_guest_identity_cookie(string $token, string $name): void
+function app_guest_identity_cookie_options(int $expires): array
 {
-    $options = [
-        'expires' => time() + 60 * 60 * 24 * 365,
+    return [
+        'expires' => $expires,
         'path' => '/',
         'secure' => filter_var(app_env('SESSION_SECURE', false), FILTER_VALIDATE_BOOL),
         'httponly' => true,
         'samesite' => 'Lax',
     ];
+}
 
-    setcookie('1g1a_guest_token', $token, $options);
-    setcookie('1g1a_guest_name', $name, $options);
+function app_set_guest_identity_cookie(string $shareEventToken, string $token, string $name): void
+{
+    $suffix = app_guest_identity_cookie_suffix($shareEventToken);
+    $options = app_guest_identity_cookie_options(time() + 60 * 60 * 24 * 365);
+
+    setcookie('1g1a_guest_token_' . $suffix, $token, $options);
+    setcookie('1g1a_guest_name_' . $suffix, $name, $options);
+}
+
+function app_clear_guest_identity_cookie(string $shareEventToken): void
+{
+    $suffix = app_guest_identity_cookie_suffix($shareEventToken);
+    $options = app_guest_identity_cookie_options(time() - 3600);
+
+    setcookie('1g1a_guest_token_' . $suffix, '', $options);
+    setcookie('1g1a_guest_name_' . $suffix, '', $options);
+    unset($_COOKIE['1g1a_guest_token_' . $suffix], $_COOKIE['1g1a_guest_name_' . $suffix]);
+
+    setcookie('1g1a_guest_token', '', $options);
+    setcookie('1g1a_guest_name', '', $options);
+    unset($_COOKIE['1g1a_guest_token'], $_COOKIE['1g1a_guest_name']);
 }
 
 function app_upsert_guest_visitor(PDO $db, string $token, string $name): void
@@ -975,6 +1000,22 @@ function app_fetch_guest_messages(PDO $db, int $shareEventId, string $guestName,
     );
     $stmt->bindValue(':share_event_id', $shareEventId, PDO::PARAM_INT);
     $stmt->bindValue(':guest_name', $guestName);
+    $stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll() ?: [];
+}
+
+function app_fetch_share_event_messages(PDO $db, int $shareEventId, int $limit = 50): array
+{
+    $stmt = $db->prepare(
+        'SELECT guest_name, message, created_at
+         FROM guest_messages
+         WHERE share_event_id = :share_event_id
+         ORDER BY created_at DESC, id DESC
+         LIMIT :limit'
+    );
+    $stmt->bindValue(':share_event_id', $shareEventId, PDO::PARAM_INT);
     $stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
     $stmt->execute();
 

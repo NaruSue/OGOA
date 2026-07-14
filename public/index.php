@@ -16,6 +16,9 @@ if ($path === '/healthz') {
 }
 
 if ($path === '/' && $method === 'GET') {
+    if ($db !== null && app_current_user($db) !== null) {
+        app_redirect('/dashboard');
+    }
     app_render('Home', render_home_simple());
     exit;
 }
@@ -1217,6 +1220,35 @@ function render_share_event(?PDO $db, string $token, string $method): void
         return;
     }
 
+    if ((string) ($event['status'] ?? 'ready') !== 'ready') {
+        app_render('準備中', render_preparing_page($token));
+        return;
+    }
+
+    if (app_share_event_expired($event)) {
+        app_clear_guest_identity_cookie($token);
+        app_render('期限切れ', render_expired_share_page(), ['chrome' => false]);
+        return;
+    }
+
+    $currentUser = app_current_user($db);
+    $isOwnerPreview = $currentUser !== null && (int) ($event['user_id'] ?? 0) === (int) $currentUser['id'];
+    if ($isOwnerPreview) {
+        if ($method === 'POST') {
+            app_redirect('/s/' . $token);
+        }
+
+        $ownerName = trim((string) ($currentUser['account_display_name'] ?? $currentUser['name'] ?? ''));
+        if ($ownerName === '') {
+            $ownerName = app_guest_display_name($event);
+        }
+        $photos = app_fetch_share_event_photos($db, (int) $event['id']);
+        $links = app_fetch_profile_links($db, (int) $event['profile_id']);
+        $messages = app_fetch_share_event_messages($db, (int) $event['id']);
+        app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $ownerName, $photos, $links, $messages, false), ['chrome' => false]);
+        return;
+    }
+
     if ($method === 'POST') {
         app_require_csrf();
         if (array_key_exists('guest_message', $_POST)) {
@@ -1225,8 +1257,8 @@ function render_share_event(?PDO $db, string $token, string $method): void
                 app_flash('メッセージを入力してください。');
                 app_redirect('/s/' . $token);
             }
-            $viewerToken = app_guest_token_from_cookie();
-            $guestName = app_guest_name_from_cookie();
+            $viewerToken = app_guest_token_from_cookie($token);
+            $guestName = app_guest_name_from_cookie($token);
             if ($viewerToken !== null && $guestName === null) {
                 $stmt = $db->prepare('SELECT display_name FROM guest_visitors WHERE viewer_token = :viewer_token LIMIT 1');
                 $stmt->execute(['viewer_token' => $viewerToken]);
@@ -1256,7 +1288,7 @@ function render_share_event(?PDO $db, string $token, string $method): void
 
             $viewerToken = $viewerToken ?? bin2hex(random_bytes(16));
             app_upsert_guest_visitor($db, $viewerToken, $guestName);
-            app_set_guest_identity_cookie($viewerToken, $guestName);
+            app_set_guest_identity_cookie($token, $viewerToken, $guestName);
             app_store_guest_message($db, (int) $event['profile_id'], (int) $event['id'], $guestName, $guestMessage, $recipientEmail);
             $sent = app_send_guest_message_notification($db, $event, $guestName, $guestMessage);
             app_flash($sent ? 'メッセージを送信しました。' : 'メッセージは保存しましたが、メール送信に失敗しました。');
@@ -1268,26 +1300,16 @@ function render_share_event(?PDO $db, string $token, string $method): void
             app_redirect('/s/' . $token);
         }
 
-        $viewerToken = app_guest_token_from_cookie() ?? bin2hex(random_bytes(16));
+        $viewerToken = app_guest_token_from_cookie($token) ?? bin2hex(random_bytes(16));
         app_upsert_guest_visitor($db, $viewerToken, $guestName);
-        app_set_guest_identity_cookie($viewerToken, $guestName);
+        app_set_guest_identity_cookie($token, $viewerToken, $guestName);
         $event = app_touch_share_event_first_access($db, (int) $event['id']) ?? $event;
         app_log_share_access($db, (int) $event['id'], (int) $event['profile_id'], $viewerToken);
         app_redirect('/s/' . $token);
     }
 
-    if ((string) ($event['status'] ?? 'ready') !== 'ready') {
-        app_render('準備中', render_preparing_page($token));
-        return;
-    }
-
-    if (app_share_event_expired($event)) {
-        app_render('期限切れ', render_expired_share_page(), ['chrome' => false]);
-        return;
-    }
-
-    $viewerToken = app_guest_token_from_cookie();
-    $guestName = app_guest_name_from_cookie();
+    $viewerToken = app_guest_token_from_cookie($token);
+    $guestName = app_guest_name_from_cookie($token);
     if ($viewerToken !== null && $guestName === null) {
         $stmt = $db->prepare('SELECT display_name FROM guest_visitors WHERE viewer_token = :viewer_token LIMIT 1');
         $stmt->execute(['viewer_token' => $viewerToken]);
@@ -1304,6 +1326,7 @@ function render_share_event(?PDO $db, string $token, string $method): void
 
     $event = app_touch_share_event_first_access($db, (int) $event['id']) ?? $event;
     if (app_share_event_expired($event)) {
+        app_clear_guest_identity_cookie($token);
         app_render('期限切れ', render_expired_share_page(), ['chrome' => false]);
         return;
     }
@@ -1394,7 +1417,7 @@ function render_guest_message_box(string $token): string
     return (string) ob_get_clean();
 }
 
-function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = []): string
+function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = [], bool $showMessageBox = true): string
 {
     $profileDisplayName = app_guest_display_name($event);
     $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
@@ -1427,8 +1450,7 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
         ]);
         $mapUrl = 'https://www.openstreetmap.org/export/embed.html?bbox=' . rawurlencode($bbox) . '&layer=mapnik&marker=' . rawurlencode($lat . ',' . $lng);
         $mapAppUrl = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($lat . ',' . $lng);
-        $osmUrl = 'https://www.openstreetmap.org/?mlat=' . rawurlencode((string) $lat) . '&mlon=' . rawurlencode((string) $lng) . '#map=16/' . rawurlencode((string) $lat) . '/' . rawurlencode((string) $lng);
-        $mapHtml = '<section class="guest-map-block"><h3>場所</h3><div class="guest-map-frame"><iframe src="' . app_h($mapUrl) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="地図"></iframe></div><div class="map-actions"><a class="button primary" href="' . app_h($mapAppUrl) . '" target="_blank" rel="noreferrer">地図アプリで開く</a><a class="button secondary map-browser-link" href="' . app_h($osmUrl) . '" target="_blank" rel="noreferrer">OpenStreetMapで見る</a></div><p class="muted">地図データ © OpenStreetMap contributors</p></section>';
+        $mapHtml = '<section class="guest-map-block"><h3>場所</h3><div class="guest-map-frame"><iframe src="' . app_h($mapUrl) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="地図"></iframe></div><div class="map-actions"><a class="button primary" href="' . app_h($mapAppUrl) . '" target="_blank" rel="noreferrer">地図アプリで開く</a></div><p class="muted">地図データ © OpenStreetMap contributors</p></section>';
     }
 
     $messageHistoryHtml = '';
@@ -1446,18 +1468,12 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
   </header>
 
   <section class="card guest-card guest-event-card">
-    <p class="eyebrow">Event</p>
-    <h2>イベント</h2>
     <?php if ($message !== ''): ?>
       <div class="message-box">
-        <div class="message-head">
-          <span class="guest-badge">今日のメッセージ</span>
-        </div>
         <p><?= nl2br(app_h($message)) ?></p>
       </div>
     <?php endif; ?>
     <?php if ($photoHtml !== ''): ?>
-      <h3>今日の写真</h3>
       <div class="photo-grid">
         <?= $photoHtml ?>
       </div>
@@ -1490,16 +1506,20 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
     <?php endif; ?>
   </section>
 
-  <section class="card guest-card guest-message-section">
-    <h2>ひとことメッセージ</h2>
-    <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
-    <?php if ($messageHistoryHtml !== ''): ?>
-      <div class="guest-sent-list">
-        <h3>送信済み</h3>
-        <?= $messageHistoryHtml ?>
-      </div>
-    <?php endif; ?>
-  </section>
+  <?php if ($showMessageBox || $messageHistoryHtml !== ''): ?>
+    <section class="card guest-card guest-message-section">
+      <h2>ひとことメッセージ</h2>
+      <?php if ($showMessageBox): ?>
+        <?= render_guest_message_box((string) ($event['public_token'] ?? '')) ?>
+      <?php endif; ?>
+      <?php if ($messageHistoryHtml !== ''): ?>
+        <div class="guest-sent-list">
+          <h3>送信済み</h3>
+          <?= $messageHistoryHtml ?>
+        </div>
+      <?php endif; ?>
+    </section>
+  <?php endif; ?>
 </section>
 <footer class="guest-footer">
   <a class="guest-app-link" href="<?= app_h(app_url('/')) ?>">
@@ -1571,14 +1591,10 @@ function render_guest_profile_screen(array $event, string $guestName, array $pho
       </div>
     </div>
     <div class="message-box">
-      <div class="message-head">
-        <span class="guest-badge">今日のメッセージ</span>
-      </div>
       <p><?= nl2br(app_h((string) ($event['body'] ?? ''))) ?: '今日はありがとうございました。' ?></p>
     </div>
   </div>
   <div class="card guest-card">
-    <h2>今日の写真</h2>
     <div class="photo-grid">
       <?= $photoHtml !== '' ? $photoHtml : '<div class="empty">写真はまだありません。</div>' ?>
     </div>
