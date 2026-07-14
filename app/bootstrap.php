@@ -270,6 +270,17 @@ function app_demo_user(PDO $db): array
     $stmt->execute(['google_sub' => 'demo-sub']);
     $user = $stmt->fetch();
     if ($user) {
+        if (trim((string) ($user['avatar_url'] ?? '')) === '') {
+            $update = $db->prepare('UPDATE users SET avatar_url = :avatar_url, updated_at = CURRENT_TIMESTAMP WHERE id = :id RETURNING *');
+            $update->execute([
+                'avatar_url' => app_random_default_avatar_url(),
+                'id' => (int) $user['id'],
+            ]);
+            $updated = $update->fetch();
+
+            return $updated ?: $user;
+        }
+
         return $user;
     }
 
@@ -282,7 +293,7 @@ function app_demo_user(PDO $db): array
         'google_sub' => 'demo-sub',
         'email' => 'demo@1g1a.local',
         'name' => '1G1A Demo',
-        'avatar_url' => null,
+        'avatar_url' => app_random_default_avatar_url(),
         'account_display_name' => '1G1A Demo',
         'account_bio' => 'デモ用アカウントです。',
         'role' => 'user',
@@ -560,11 +571,23 @@ function app_fetch_share_event_photos(PDO $db, int $eventId): array
     return $stmt->fetchAll() ?: [];
 }
 
+function app_default_avatar_asset_url(int $index): string
+{
+    $index = max(1, min(10, $index));
+
+    return app_url('/assets/default-avatar-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.svg');
+}
+
+function app_random_default_avatar_url(): string
+{
+    return app_default_avatar_asset_url(random_int(1, 10));
+}
+
 function app_default_avatar_url(string $seed): string
 {
     $index = (abs((int) crc32($seed !== '' ? $seed : '1g1a')) % 10) + 1;
 
-    return app_url('/assets/default-avatar-' . str_pad((string) $index, 2, '0', STR_PAD_LEFT) . '.svg');
+    return app_default_avatar_asset_url($index);
 }
 
 function app_account_avatar_url(array $user): string

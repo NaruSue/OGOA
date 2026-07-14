@@ -244,6 +244,7 @@ function app_upsert_user_from_google(PDO $db, array $profile): array
     $stmt = $db->prepare('SELECT * FROM users WHERE google_sub = :google_sub LIMIT 1');
     $stmt->execute(['google_sub' => (string) $profile['sub']]);
     $user = $stmt->fetch();
+    $defaultAvatarUrl = app_random_default_avatar_url();
     if ($user) {
         $update = $db->prepare(
             'UPDATE users
@@ -258,7 +259,7 @@ function app_upsert_user_from_google(PDO $db, array $profile): array
         $update->execute([
             'email' => (string) $profile['email'],
             'name' => (string) $profile['name'],
-            'avatar_url' => $profile['picture'] ?? null,
+            'avatar_url' => $defaultAvatarUrl,
             'display_name' => (string) $profile['name'],
             'id' => (int) $user['id'],
         ]);
@@ -276,7 +277,7 @@ function app_upsert_user_from_google(PDO $db, array $profile): array
         'google_sub' => (string) $profile['sub'],
         'email' => (string) $profile['email'],
         'name' => (string) $profile['name'],
-        'avatar_url' => $profile['picture'] ?? null,
+        'avatar_url' => $defaultAvatarUrl,
         'account_display_name' => (string) $profile['name'],
         'role' => 'user',
     ]);
@@ -585,7 +586,7 @@ function render_account(?PDO $db, string $method): void
         $displayName = trim((string) ($_POST['display_name'] ?? ''));
         $avatarUrl = trim((string) ($user['avatar_url'] ?? ''));
         if (isset($_POST['use_default_avatar']) && $_POST['use_default_avatar'] === '1') {
-            $avatarUrl = '';
+            $avatarUrl = app_random_default_avatar_url();
         }
         $avatarUpload = $_FILES['avatar_upload'] ?? null;
         if (is_array($avatarUpload) && ($avatarUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -595,6 +596,9 @@ function render_account(?PDO $db, string $method): void
         if ($displayName === '' || mb_strlen($displayName) > 120) {
             app_flash('入力内容を確認してください。');
             app_redirect('/account');
+        }
+        if ($avatarUrl === '') {
+            $avatarUrl = app_random_default_avatar_url();
         }
         $stmt = $db->prepare('UPDATE users SET account_display_name = :display_name, avatar_url = :avatar_url, updated_at = CURRENT_TIMESTAMP WHERE id = :id');
         $stmt->execute([
@@ -777,6 +781,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         <label class="checkbox">
           <input type="checkbox" name="clear_avatar" value="1"> 共有プロフィール画像を削除してアカウント画像を使う
         </label>
+        <p class="hint">この操作では、元のアカウントプロフィール画像は削除しません。</p>
       <?php endif; ?>
       <label>見出し
         <input name="headline" maxlength="160" value="<?= app_h($headline) ?>" placeholder="旅と写真が好きです">
