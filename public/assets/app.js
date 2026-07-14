@@ -291,9 +291,129 @@
     }, () => {}, { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 });
   }
 
+
+  function handleContactEditor() {
+    const editor = document.querySelector('[data-contact-editor]');
+    if (!editor) return;
+    const picker = editor.querySelector('[data-contact-picker]');
+    const fields = editor.querySelector('[data-contact-fields]');
+    const empty = editor.querySelector('[data-contact-empty]');
+    const form = editor.closest('form');
+    const setEmpty = () => { if (empty) empty.hidden = fields.querySelectorAll('[data-contact-field]').length > 0; };
+    const setSelected = (code, selected) => {
+      editor.querySelectorAll('[data-contact-service][data-code="' + CSS.escape(code) + '"]').forEach((button) => button.classList.toggle('selected', selected));
+    };
+    const addDeleteMarker = (code) => {
+      if (!form || form.querySelector('input[type="hidden"][data-contact-deleted="' + CSS.escape(code) + '"]')) return;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'contacts[' + code + ']';
+      input.value = '';
+      input.dataset.contactDeleted = code;
+      form.appendChild(input);
+    };
+    const fieldExists = (code) => fields.querySelector('[data-contact-field][data-contact-code="' + CSS.escape(code) + '"]');
+    const addField = (service) => {
+      const code = service.dataset.code || '';
+      if (!code || fieldExists(code)) return;
+      form?.querySelector('input[type="hidden"][data-contact-deleted="' + CSS.escape(code) + '"]')?.remove();
+      const wrap = document.createElement('div');
+      wrap.className = 'contact-field';
+      wrap.dataset.contactField = '';
+      wrap.dataset.contactCode = code;
+      const title = document.createElement('div');
+      title.className = 'contact-field-title';
+      const name = document.createElement('span');
+      name.textContent = service.dataset.name || code;
+      const remove = document.createElement('button');
+      remove.className = 'icon-button danger';
+      remove.type = 'button';
+      remove.dataset.contactRemove = '';
+      remove.setAttribute('aria-label', '削除');
+      remove.textContent = '🗑';
+      title.append(name, remove);
+      const input = document.createElement('input');
+      input.name = 'contacts[' + code + ']';
+      input.placeholder = service.dataset.placeholder || '';
+      wrap.append(title, input);
+      fields.appendChild(wrap);
+      setSelected(code, true);
+      setEmpty();
+    };
+    editor.querySelector('[data-contact-open]')?.addEventListener('click', () => { picker.hidden = false; });
+    editor.querySelector('[data-contact-close]')?.addEventListener('click', () => { picker.hidden = true; });
+    editor.querySelector('[data-contact-add-selected]')?.addEventListener('click', () => {
+      const selected = Array.from(editor.querySelectorAll('[data-contact-service].pending'));
+      selected.forEach((service) => {
+        addField(service);
+        service.classList.remove('pending');
+      });
+      picker.hidden = true;
+      const last = fields.querySelector('[data-contact-field]:last-child input');
+      last?.focus();
+    });
+    editor.addEventListener('click', (event) => {
+      const service = event.target.closest('[data-contact-service]');
+      if (service) {
+        const code = service.dataset.code || '';
+        if (fieldExists(code) || service.classList.contains('selected')) {
+          fieldExists(code)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          picker.hidden = true;
+        } else {
+          service.classList.toggle('pending');
+        }
+      }
+      const remove = event.target.closest('[data-contact-remove]');
+      if (remove) {
+        const field = remove.closest('[data-contact-field]');
+        const code = field?.dataset.contactCode || '';
+        if (code) addDeleteMarker(code);
+        field?.remove();
+        setSelected(code, false);
+        setEmpty();
+      }
+    });
+    setEmpty();
+  }
+
+  function handleGuestContactActions() {
+    const buttons = document.querySelectorAll('[data-contact-action]');
+    if (!buttons.length) return;
+    const menu = document.createElement('div');
+    menu.className = 'contact-action-overlay';
+    menu.hidden = true;
+    menu.innerHTML = '<div class="contact-action-panel"><h3></h3><button class="button secondary" type="button" data-copy>コピー</button><a class="button primary" target="_blank" rel="noreferrer" data-open>リンク先へ移動</a><button class="button secondary" type="button" data-close>閉じる</button></div>';
+    document.body.appendChild(menu);
+    const title = menu.querySelector('h3');
+    const copy = menu.querySelector('[data-copy]');
+    const open = menu.querySelector('[data-open]');
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        title.textContent = button.dataset.service || 'リンク';
+        copy.dataset.value = button.dataset.copy || '';
+        open.href = button.dataset.url || '#';
+        menu.hidden = false;
+      });
+    });
+    copy.addEventListener('click', async () => {
+      const value = copy.dataset.value || '';
+      try {
+        await navigator.clipboard.writeText(value);
+        copy.textContent = 'コピーしました';
+        setTimeout(() => { copy.textContent = 'コピー'; }, 1200);
+      } catch (err) {
+        window.prompt('コピーしてください', value);
+      }
+    });
+    menu.querySelector('[data-close]').addEventListener('click', () => { menu.hidden = true; });
+    menu.addEventListener('click', (event) => { if (event.target === menu) menu.hidden = true; });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     handleDashboard();
     handleQrPage();
+    handleContactEditor();
+    handleGuestContactActions();
     syncPending();
     handlePwaInstall();
   });

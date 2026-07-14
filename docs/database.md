@@ -52,7 +52,12 @@
 
 ### sns_types
 
-SNS種別のマスタです。
+SNS/連絡先種類のマスタです。
+
+SNSだけでなく、Webサイト、メール、電話、技術プロフィール、コミュニティなど、ゲストに見せたい連絡先サービスを管理します。
+固定のPHP配列ではなく、このマスタを元にプロフィール編集画面とゲスト表示を組み立てます。
+
+既存カラム:
 
 - `id`
 - `code`
@@ -60,19 +65,49 @@ SNS種別のマスタです。
 - `icon_url`
 - `sort_order`
 
+追加予定カラム:
+
+- `display_name`: ゲスト画面や追加モーダルで表示するサービス名。例: `Instagram`, `メール`
+- `category`: 表示カテゴリ。例: `standard`, `activity`, `work`, `developer`, `community`, `contact`
+- `input_kind`: 入力値の種類。例: `handle`, `url`, `email`, `phone`, `text`
+- `url_template`: リンク先URLを生成するテンプレート。例: `https://instagram.com/{value}`, `mailto:{value}`
+- `copy_template`: コピー用文字列のテンプレート。例: `@{value}`, `{value}`
+- `placeholder`: 編集画面の入力例
+- `help_text`: 入力補足
+- `is_active`: 新規追加候補として表示するか
+- `created_at`
+- `updated_at`
+
+初期マスタ候補:
+
+- 標準: LINE, Instagram, X, note, Webサイト, メール
+- 活動・発信: YouTube, TikTok, Threads, Bluesky, Facebook, Pinterest
+- 仕事・技術: LinkedIn, Wantedly, Qiita, Zenn, GitHub, Speaker Deck, connpass
+- コミュニティ: Discord, Twitch, Reddit, Mastodon
+- その他: 電話, Other
+
+中国圏だけで主に使われるサービスは初期マスタには含めません。
+例: WeChat, Weibo, QQ, Douyin, Kuaishou, Xiaohongshu など。
+
 ### profile_sns
 
-共有プロフィールごとの SNS・Webサイトリンクです。
+共有プロフィールごとの SNS・Webサイト・連絡先リンクです。
 
 - `id`
 - `profile_id`
 - `sns_type_id`
 - `label`
 - `url`
+- `raw_value`: ユーザーが入力した元の値。コピー表示と編集フォームの復元に使う。
 - `sort_order`
 - `is_primary`
 - `created_at`
 - `updated_at`
+
+`url` には、ユーザーが入力した値から生成した最終リンクURLを保存します。
+`raw_value` には、コピー表示や編集フォーム復元に使う入力元の値を保存します。
+
+ゲスト表示では、`sns_types` の `icon_url`, `display_name`, `copy_template`, `url_template` と組み合わせて、アイコングリッドとアクションメニューを表示します。
 
 ### share_events
 

@@ -760,7 +760,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     $title = $profile === null ? '共有プロフィールを作成' : '共有プロフィールを編集';
     $button = $profile === null ? '作成する' : '更新する';
     $csrf = app_h(app_csrf_token());
-    $contactFields = app_profile_contact_fields();
+    $contactServices = app_fetch_contact_services($db);
     $contactValues = $profile ? app_profile_contact_values(app_fetch_profile_links($db, (int) $profile['id'])) : [];
     ob_start();
     ?>
@@ -796,14 +796,57 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
       <label>紹介文
         <textarea name="bio" rows="5" maxlength="1000"><?= app_h($bio) ?></textarea>
       </label>
-      <div class="form-block">
-        <h2>連絡先</h2>
-        <p class="muted">入力したものだけゲスト画面に表示されます。</p>
-        <?php foreach ($contactFields as $code => $field): ?>
-          <label><?= app_h($field['name']) ?>
-            <input name="contacts[<?= app_h((string) $code) ?>]" value="<?= app_h((string) ($contactValues[$code] ?? '')) ?>" placeholder="<?= app_h($field['placeholder']) ?>">
-          </label>
-        <?php endforeach; ?>
+      <div class="form-block contact-editor" data-contact-editor>
+        <div class="contact-editor-head">
+          <div>
+            <h2>連絡先</h2>
+            <p class="muted">登録済みの連絡先だけゲスト画面に表示されます。</p>
+          </div>
+          <button class="button secondary" type="button" data-contact-open>＋ 追加</button>
+        </div>
+        <div class="contact-fields" data-contact-fields>
+          <?php foreach ($contactServices as $service): ?>
+            <?php
+              $code = (string) $service['code'];
+              $value = (string) ($contactValues[$code] ?? '');
+              if ($value === '') { continue; }
+            ?>
+            <div class="contact-field" data-contact-field data-contact-code="<?= app_h($code) ?>">
+              <div class="contact-field-title">
+                <span><?= app_h((string) ($service['display_name'] ?? $service['name'])) ?></span>
+                <button class="icon-button danger" type="button" data-contact-remove aria-label="削除">🗑</button>
+              </div>
+              <input name="contacts[<?= app_h($code) ?>]" value="<?= app_h($value) ?>" placeholder="<?= app_h((string) ($service['placeholder'] ?? '')) ?>">
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <p class="empty contact-empty" data-contact-empty<?= $contactValues !== [] ? ' hidden' : '' ?>>連絡先はまだありません。</p>
+        <div class="contact-picker" data-contact-picker hidden>
+          <div class="contact-picker-panel">
+            <div class="contact-picker-head">
+              <h3>追加する連絡先</h3>
+              <button class="icon-button" type="button" data-contact-close aria-label="閉じる">×</button>
+            </div>
+            <div class="contact-picker-grid">
+              <?php foreach ($contactServices as $service): ?>
+                <?php $code = (string) $service['code']; ?>
+                <button class="contact-service-button<?= isset($contactValues[$code]) ? ' selected' : '' ?>" type="button" data-contact-service
+                  data-code="<?= app_h($code) ?>"
+                  data-name="<?= app_h((string) ($service['display_name'] ?? $service['name'])) ?>"
+                  data-placeholder="<?= app_h((string) ($service['placeholder'] ?? '')) ?>"
+                  data-icon="<?= app_h((string) ($service['icon_url'] ?? '')) ?>">
+                  <?php if (trim((string) ($service['icon_url'] ?? '')) !== ''): ?>
+                    <img src="<?= app_h((string) $service['icon_url']) ?>" alt="" loading="lazy">
+                  <?php endif; ?>
+                  <span><?= app_h((string) ($service['display_name'] ?? $service['name'])) ?></span>
+                </button>
+              <?php endforeach; ?>
+            </div>
+            <div class="contact-picker-actions">
+              <button class="button primary" type="button" data-contact-add-selected>追加</button>
+            </div>
+          </div>
+        </div>
       </div>
       <label class="checkbox">
         <input type="checkbox" name="is_public" value="1"<?= $checked ?>> 利用する
@@ -816,49 +859,112 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     app_render($title, (string) ob_get_clean(), ['user' => $user]);
 }
 
-function app_profile_contact_fields(): array
+function app_fetch_contact_services(PDO $db): array
 {
-    return [
-        'line' => ['name' => 'LINE', 'label' => 'LINE', 'placeholder' => 'https://line.me/... または LINE ID'],
-        'instagram' => ['name' => 'Instagram', 'label' => 'Instagram', 'placeholder' => 'https://instagram.com/yourname または @yourname'],
-        'x' => ['name' => 'X', 'label' => 'X', 'placeholder' => 'https://x.com/yourname または @yourname'],
-        'email' => ['name' => 'メール', 'label' => 'Email', 'placeholder' => 'name@example.com'],
-        'phone' => ['name' => '電話', 'label' => 'Phone', 'placeholder' => '090-0000-0000'],
-    ];
+    $stmt = $db->query(
+        "SELECT id, code, name,
+                COALESCE(display_name, name) AS display_name,
+                COALESCE(category, 'standard') AS category,
+                COALESCE(input_kind, 'text') AS input_kind,
+                icon_url, url_template, copy_template, placeholder, help_text, sort_order,
+                COALESCE(allow_multibyte, FALSE) AS allow_multibyte,
+                COALESCE(normalize_width, TRUE) AS normalize_width
+         FROM sns_types
+         WHERE COALESCE(is_active, TRUE) = TRUE
+         ORDER BY sort_order ASC, id ASC"
+    );
+
+    return $stmt->fetchAll() ?: [];
 }
 
-function app_normalize_contact_url(string $code, string $value): string
+function app_contact_service_by_code(array $services): array
+{
+    $map = [];
+    foreach ($services as $service) {
+        $code = (string) ($service['code'] ?? '');
+        if ($code !== '') {
+            $map[$code] = $service;
+        }
+    }
+
+    return $map;
+}
+
+function app_contact_fill_template(?string $template, string $value, bool $encodeValue = true): string
+{
+    $template = trim((string) $template);
+    if ($template === '') {
+        return $value;
+    }
+
+    return str_replace('{value}', $encodeValue ? rawurlencode($value) : $value, $template);
+}
+
+function app_normalize_contact_width(string $value): string
+{
+    if (function_exists('mb_convert_kana')) {
+        return mb_convert_kana($value, 'asKV', 'UTF-8');
+    }
+
+    return strtr($value, [
+        '＠' => '@', '．' => '.', '＿' => '_', '－' => '-', 'ー' => '-', '＋' => '+',
+        '／' => '/', '：' => ':', '？' => '?', '＆' => '&', '＝' => '=', '％' => '%',
+        '＃' => '#', '！' => '!', '　' => ' ',
+    ]);
+}
+
+function app_normalize_contact_raw_value(array $service, string $value): string
 {
     $value = trim($value);
     if ($value === '') {
         return '';
     }
 
-    if ($code === 'email') {
-        return str_starts_with($value, 'mailto:') ? $value : 'mailto:' . $value;
+    if (filter_var($service['normalize_width'] ?? true, FILTER_VALIDATE_BOOL)) {
+        $value = app_normalize_contact_width($value);
     }
 
-    if ($code === 'phone') {
-        return str_starts_with($value, 'tel:') ? $value : 'tel:' . preg_replace('/[^\d+]/', '', $value);
+    $kind = (string) ($service['input_kind'] ?? 'text');
+    if (in_array($kind, ['handle'], true)) {
+        $value = ltrim($value, '@');
+        if (!filter_var($service['allow_multibyte'] ?? false, FILTER_VALIDATE_BOOL)) {
+            $value = preg_replace('/[^A-Za-z0-9._-]/', '', $value) ?: '';
+        }
     }
-
-    if ($code === 'instagram' && str_starts_with($value, '@')) {
-        return 'https://instagram.com/' . ltrim($value, '@');
+    if ($kind === 'email') {
+        $value = strtolower($value);
     }
-
-    if ($code === 'x' && str_starts_with($value, '@')) {
-        return 'https://x.com/' . ltrim($value, '@');
+    if ($kind === 'phone') {
+        return preg_replace('/[^\d+]/', '', $value) ?: '';
     }
-
-    if ($code === 'line' && !str_starts_with($value, 'http://') && !str_starts_with($value, 'https://')) {
-        return 'https://line.me/ti/p/' . ltrim($value, '@');
-    }
-
-    if (!str_contains($value, ':')) {
+    if ($kind === 'url' && !str_contains($value, ':')) {
         return 'https://' . $value;
     }
 
-    return $value;
+    return trim($value);
+}
+
+function app_contact_url_from_value(array $service, string $rawValue): string
+{
+    $rawValue = trim($rawValue);
+    if ($rawValue === '') {
+        return '';
+    }
+    if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $rawValue) === 1) {
+        return $rawValue;
+    }
+
+    return app_contact_fill_template((string) ($service['url_template'] ?? ''), $rawValue, true);
+}
+
+function app_contact_copy_value(array $service, string $rawValue): string
+{
+    $rawValue = trim($rawValue);
+    if ($rawValue === '') {
+        return '';
+    }
+
+    return app_contact_fill_template((string) ($service['copy_template'] ?? '{value}'), $rawValue, false);
 }
 
 function app_profile_contact_values(array $links): array
@@ -867,7 +973,7 @@ function app_profile_contact_values(array $links): array
     foreach ($links as $link) {
         $code = (string) ($link['sns_code'] ?? '');
         if ($code !== '') {
-            $values[$code] = (string) ($link['url'] ?? '');
+            $values[$code] = (string) (($link['raw_value'] ?? '') !== '' ? $link['raw_value'] : ($link['url'] ?? ''));
         }
     }
 
@@ -876,43 +982,38 @@ function app_profile_contact_values(array $links): array
 
 function app_save_profile_contacts(PDO $db, int $profileId, array $input): void
 {
-    $fields = app_profile_contact_fields();
-    $upsertType = $db->prepare(
-        'INSERT INTO sns_types (code, name, sort_order)
-         VALUES (:code, :name, :sort_order)
-         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order
-         RETURNING id'
-    );
+    $services = app_contact_service_by_code(app_fetch_contact_services($db));
     $delete = $db->prepare('DELETE FROM profile_sns WHERE profile_id = :profile_id AND sns_type_id = :sns_type_id');
     $upsertLink = $db->prepare(
-        'INSERT INTO profile_sns (profile_id, sns_type_id, label, url, sort_order, is_primary)
-         VALUES (:profile_id, :sns_type_id, :label, :url, :sort_order, false)
+        'INSERT INTO profile_sns (profile_id, sns_type_id, label, url, raw_value, sort_order, is_primary)
+         VALUES (:profile_id, :sns_type_id, :label, :url, :raw_value, :sort_order, false)
          ON CONFLICT (profile_id, sns_type_id)
-         DO UPDATE SET label = EXCLUDED.label, url = EXCLUDED.url, sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP'
+         DO UPDATE SET label = EXCLUDED.label, url = EXCLUDED.url, raw_value = EXCLUDED.raw_value, sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP'
     );
 
-    $order = 10;
-    foreach ($fields as $code => $field) {
-        $upsertType->execute([
-            'code' => $code,
-            'name' => $field['name'],
-            'sort_order' => $order,
-        ]);
-        $snsTypeId = (int) $upsertType->fetchColumn();
-        $url = app_normalize_contact_url($code, (string) ($input[$code] ?? ''));
-
-        if ($url === '') {
-            $delete->execute(['profile_id' => $profileId, 'sns_type_id' => $snsTypeId]);
-        } else {
-            $upsertLink->execute([
-                'profile_id' => $profileId,
-                'sns_type_id' => $snsTypeId,
-                'label' => $field['label'],
-                'url' => $url,
-                'sort_order' => $order,
-            ]);
+    foreach ($input as $code => $value) {
+        $code = (string) $code;
+        if (!isset($services[$code])) {
+            continue;
         }
-        $order += 10;
+        $service = $services[$code];
+        $snsTypeId = (int) $service['id'];
+        $rawValue = app_normalize_contact_raw_value($service, (string) $value);
+        $url = app_contact_url_from_value($service, $rawValue);
+
+        if ($rawValue === '' || $url === '') {
+            $delete->execute(['profile_id' => $profileId, 'sns_type_id' => $snsTypeId]);
+            continue;
+        }
+
+        $upsertLink->execute([
+            'profile_id' => $profileId,
+            'sns_type_id' => $snsTypeId,
+            'label' => (string) ($service['display_name'] ?? $service['name'] ?? $code),
+            'url' => $url,
+            'raw_value' => $rawValue,
+            'sort_order' => (int) ($service['sort_order'] ?? 0),
+        ]);
     }
 }
 
@@ -1360,7 +1461,11 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
 
     $linkHtml = '';
     foreach ($links as $link) {
-        $linkHtml .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
+        $serviceName = (string) ($link['service_display_name'] ?? $link['label'] ?? $link['sns_name'] ?? 'Link');
+        $copyValue = app_contact_copy_value($link, (string) (($link['raw_value'] ?? '') !== '' ? $link['raw_value'] : ($link['url'] ?? '')));
+        $iconUrl = trim((string) ($link['icon_url'] ?? ''));
+        $iconHtml = $iconUrl !== '' ? '<img src="' . app_h($iconUrl) . '" alt="" loading="lazy">' : '<span>' . app_h(mb_substr($serviceName, 0, 1, 'UTF-8')) . '</span>';
+        $linkHtml .= '<button class="contact-icon-button" type="button" data-contact-action data-service="' . app_h($serviceName) . '" data-copy="' . app_h($copyValue) . '" data-url="' . app_h((string) $link['url']) . '">' . $iconHtml . '<span>' . app_h($serviceName) . '</span></button>';
     }
 
     $mapHtml = '';
@@ -1501,7 +1606,11 @@ function render_guest_profile_screen(array $event, string $guestName, array $pho
 
     $linkHtml = '';
     foreach ($links as $link) {
-        $linkHtml .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
+        $serviceName = (string) ($link['service_display_name'] ?? $link['label'] ?? $link['sns_name'] ?? 'Link');
+        $copyValue = app_contact_copy_value($link, (string) (($link['raw_value'] ?? '') !== '' ? $link['raw_value'] : ($link['url'] ?? '')));
+        $iconUrl = trim((string) ($link['icon_url'] ?? ''));
+        $iconHtml = $iconUrl !== '' ? '<img src="' . app_h($iconUrl) . '" alt="" loading="lazy">' : '<span>' . app_h(mb_substr($serviceName, 0, 1, 'UTF-8')) . '</span>';
+        $linkHtml .= '<button class="contact-icon-button" type="button" data-contact-action data-service="' . app_h($serviceName) . '" data-copy="' . app_h($copyValue) . '" data-url="' . app_h((string) $link['url']) . '">' . $iconHtml . '<span>' . app_h($serviceName) . '</span></button>';
     }
 
     ob_start();

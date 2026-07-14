@@ -483,7 +483,9 @@ function app_fetch_profile_owner(PDO $db, int $profileId): ?array
 function app_fetch_profile_links(PDO $db, int $profileId): array
 {
     $stmt = $db->prepare(
-        'SELECT ps.*, st.name AS sns_name, st.code AS sns_code
+        'SELECT ps.*, st.name AS sns_name, st.code AS sns_code,
+                COALESCE(st.display_name, st.name) AS service_display_name,
+                st.icon_url, st.category, st.input_kind, st.copy_template, st.url_template
          FROM profile_sns ps
          INNER JOIN sns_types st ON st.id = ps.sns_type_id
          WHERE ps.profile_id = :profile_id
