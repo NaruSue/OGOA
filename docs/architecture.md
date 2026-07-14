@@ -24,14 +24,16 @@
 - `/dashboard` 管理トップ
 - `/account` アカウントプロフィール編集
 - `/profiles/new` 共有プロフィール作成
-- `/profiles/{id}` 共有プロフィール詳細
-- `/profiles/{id}/edit` 共有プロフィール編集
-- `/profiles/{id}/qr` QR 表示画面
+- `/profiles/{id}` 互換用。共有プロフィール編集へ遷移
+- `/profiles/{id}/edit` 共有プロフィール参照・編集
+- `/share-events/{id}/qr` 共有イベントQR再表示
+- `/share-events/qr` 未同期ドラフト用QR表示
 
 ### ゲスト公開画面
 
 - `/s/{share_event_token}` QR から開く共有イベント画面
-- `/p/{profile_token}` 共有プロフィール単体のプレビューまたは互換用
+
+共有プロフィール単体の公開URLやQR表示ルートは持たせない。
 
 ## 管理トップの役割
 

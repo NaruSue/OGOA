@@ -245,7 +245,7 @@
           const result = await syncDraft(draft);
           const eventId = result && result.event_id ? String(result.event_id) : '';
           const nextUrl = eventId
-            ? '/profiles/' + profileId + '/qr?event=' + encodeURIComponent(eventId)
+            ? '/share-events/' + encodeURIComponent(eventId) + '/qr'
             : (result.public_url || ('/s/' + publicToken));
           window.location.href = nextUrl;
           return;
@@ -257,7 +257,7 @@
       if (status) {
         status.textContent = '通信しにくいため一時保存しました。復帰後に同期します。';
       }
-      window.location.href = '/profiles/' + profileId + '/qr?token=' + encodeURIComponent(publicToken) + '&draft=1';
+      window.location.href = '/share-events/qr?profile=' + encodeURIComponent(profileId) + '&token=' + encodeURIComponent(publicToken) + '&draft=1';
     });
   }
 

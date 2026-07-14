@@ -124,14 +124,8 @@ if (preg_match('#^/profiles/(\d+)/edit$#', $path, $matches) === 1) {
     exit;
 }
 
-if (preg_match('#^/profiles/(\d+)/qr$#', $path, $matches) === 1) {
-    render_profile_qr($db, (int) $matches[1]);
-    exit;
-}
-
 if (preg_match('#^/profiles/(\d+)$#', $path, $matches) === 1) {
-    render_profile_detail($db, (int) $matches[1]);
-    exit;
+    app_redirect('/profiles/' . (int) $matches[1] . '/edit');
 }
 
 if ($path === '/share-tokens/reserve' && $method === 'POST') {
@@ -141,6 +135,16 @@ if ($path === '/share-tokens/reserve' && $method === 'POST') {
 
 if ($path === '/share-events/create' && $method === 'POST') {
     handle_share_event_save($db, false);
+    exit;
+}
+
+if ($path === '/share-events/qr' && $method === 'GET') {
+    render_share_event_qr($db, null);
+    exit;
+}
+
+if (preg_match('#^/share-events/(\d+)/qr$#', $path, $matches) === 1 && $method === 'GET') {
+    render_share_event_qr($db, (int) $matches[1]);
     exit;
 }
 
@@ -427,7 +431,7 @@ function render_dashboard(?PDO $db): void
         $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' - ' . app_h((string) $profile['display_name']) . '</option>';
         $recentEvents = app_fetch_recent_events($db, $profileId, 2);
         $eventInfo = $recentEvents !== [] ? count($recentEvents) . ' 件の共有イベント' : 'まだ共有イベントはありません';
-        $profileCards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($profileAvatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId)) . '">詳細</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
+        $profileCards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($profileAvatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
     }
 
     $eventPageSize = 5;
@@ -456,7 +460,7 @@ function render_dashboard(?PDO $db): void
         } elseif (strlen($message) > 72) {
             $message = substr($message, 0, 69) . '...';
         }
-        $eventRows .= '<a class="event-row" href="' . app_h(app_url('/profiles/' . (int) $event['profile_id'] . '/qr?event=' . (int) $event['id'])) . '">';
+        $eventRows .= '<a class="event-row" href="' . app_h(app_url('/share-events/' . (int) $event['id'] . '/qr')) . '">';
         $eventRows .= '<span class="event-row-main"><span class="event-row-meta"><strong>' . app_h($profileName) . '</strong><time datetime="' . app_h((string) ($event['created_at'] ?? '')) . '">' . app_h($eventDate) . '</time></span>';
         $eventRows .= '<p>' . app_h($message) . '</p></span></a>';
     }
@@ -742,7 +746,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         ]);
         app_flash('共有プロフィールを更新しました。');
         app_save_profile_contacts($db, (int) $profile['id'], (array) ($_POST['contacts'] ?? []));
-        app_redirect('/profiles/' . (string) $profile['id']);
+        app_redirect('/profiles/' . (string) $profile['id'] . '/edit');
     }
 
     $defaultDisplay = (string) ($user['account_display_name'] ?? $user['name'] ?? '');
@@ -912,93 +916,7 @@ function app_save_profile_contacts(PDO $db, int $profileId, array $input): void
     }
 }
 
-function render_profile_detail(?PDO $db, int $profileId): void
-{
-    if ($db === null) {
-        app_render('Profile', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
-        return;
-    }
-
-    $user = app_current_user($db);
-    if (!$user) {
-        app_redirect('/login');
-    }
-
-    $profile = app_fetch_profile($db, $profileId);
-    if (!$profile || (int) $profile['user_id'] !== (int) $user['id']) {
-        http_response_code(404);
-        app_render('Not found', '<section class="page narrow"><div class="card"><h1>共有プロフィールが見つかりません</h1></div></section>', ['user' => $user]);
-        return;
-    }
-
-    $links = app_fetch_profile_links($db, $profileId);
-    $events = app_fetch_recent_events($db, $profileId, 6);
-    $avatarUrl = app_profile_display_avatar_url($profile, $user);
-    $linkItems = '';
-    foreach ($links as $link) {
-        $linkItems .= '<a class="social-link" href="' . app_h((string) $link['url']) . '" target="_blank" rel="noreferrer"><span>' . app_h((string) $link['sns_name']) . '</span><strong>' . app_h((string) ($link['label'] ?? $link['sns_name'])) . '</strong></a>';
-    }
-    $eventItems = '';
-    foreach ($events as $event) {
-        $eventItems .= '<article class="timeline-item">';
-        $eventItems .= '<p class="eyebrow">Share event</p>';
-        $eventItems .= '<p>' . nl2br(app_h((string) ($event['body'] ?? ''))) . '</p>';
-        $photos = app_fetch_share_event_photos($db, (int) $event['id']);
-        if ($photos !== []) {
-            $eventItems .= '<div class="photo-grid">';
-            foreach ($photos as $photo) {
-                $eventItems .= '<img src="' . app_h(app_url('/media/' . basename((string) $photo['storage_path']))) . '" alt="共有写真" loading="lazy">';
-            }
-            $eventItems .= '</div>';
-        }
-        $eventItems .= '</article>';
-    }
-    ob_start();
-    ?>
-<section class="page">
-  <div class="section-head">
-    <div>
-      <p class="eyebrow">Share profile</p>
-      <h1><?= app_h((string) $profile['display_name']) ?></h1>
-      <p><?= app_h((string) ($profile['headline'] ?? '')) ?></p>
-    </div>
-    <div class="section-actions">
-      <a class="button secondary" href="<?= app_h(app_url('/profiles/' . $profileId . '/edit')) ?>">編集</a>
-      <a class="button primary" href="<?= app_h(app_url('/profiles/' . $profileId . '/qr')) ?>">QR</a>
-    </div>
-  </div>
-  <div class="two-col">
-    <div class="card">
-      <h2>表示内容</h2>
-      <div class="hero-profile compact-profile">
-        <?= app_render_profile_avatar($avatarUrl, (string) $profile['display_name']) ?>
-        <div>
-          <h3><?= app_h((string) $profile['display_name']) ?></h3>
-          <p class="muted"><?= trim((string) ($profile['avatar_url'] ?? '')) !== '' ? '共有プロフィール画像を使用中' : 'アカウントプロフィール画像を使用中' ?></p>
-        </div>
-      </div>
-      <p><?= nl2br(app_h((string) ($profile['bio'] ?? ''))) ?></p>
-      <p><strong>利用状態:</strong> <?= (bool) $profile['is_public'] ? '利用中' : '停止中' ?></p>
-    </div>
-    <div class="card">
-      <h2>SNS・リンク</h2>
-      <div class="social-list">
-        <?= $linkItems !== '' ? $linkItems : '<div class="empty">まだリンクがありません。</div>' ?>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>最近の共有イベント</h2>
-    <div class="timeline">
-      <?= $eventItems !== '' ? $eventItems : '<div class="empty">まだ共有イベントがありません。</div>' ?>
-    </div>
-  </div>
-</section>
-    <?php
-    app_render((string) $profile['display_name'], (string) ob_get_clean(), ['user' => $user]);
-}
-
-function render_profile_qr(?PDO $db, int $profileId): void
+function render_share_event_qr(?PDO $db, ?int $eventId): void
 {
     if ($db === null) {
         app_render('QR', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
@@ -1010,51 +928,61 @@ function render_profile_qr(?PDO $db, int $profileId): void
         app_redirect('/login');
     }
 
-    $profile = app_fetch_profile($db, $profileId);
-    if (!$profile || (int) $profile['user_id'] !== (int) $user['id']) {
-        http_response_code(404);
-        app_render('Not found', '<section class="page narrow"><div class="card"><h1>共有プロフィールが見つかりません</h1></div></section>', ['user' => $user]);
-        return;
-    }
-
-    $requestedEventId = isset($_GET['event']) ? (int) $_GET['event'] : 0;
     $requestedToken = isset($_GET['token']) && is_string($_GET['token']) ? trim((string) $_GET['token']) : '';
+    $requestedProfileId = isset($_GET['profile']) ? (int) $_GET['profile'] : 0;
     $draftMode = isset($_GET['draft']) && $_GET['draft'] === '1';
 
     $event = null;
-    if ($requestedEventId > 0) {
+    $profile = null;
+    if ($eventId !== null && $eventId > 0) {
         $stmt = $db->prepare(
-            'SELECT se.*, p.user_id, p.display_name AS profile_display_name, p.headline AS profile_headline, p.bio AS profile_bio, p.avatar_url AS profile_avatar_url,
+            'SELECT se.*, p.user_id, p.display_name AS profile_display_name, p.profile_name,
+                    p.headline AS profile_headline, p.bio AS profile_bio, p.avatar_url AS profile_avatar_url,
                     u.avatar_url AS account_avatar_url
              FROM share_events se
              INNER JOIN profiles p ON p.id = se.profile_id
              INNER JOIN users u ON u.id = p.user_id
-             WHERE se.id = :id AND p.id = :profile_id
+             WHERE se.id = :id AND p.user_id = :user_id
              LIMIT 1'
         );
         $stmt->execute([
-            'id' => $requestedEventId,
-            'profile_id' => $profileId,
+            'id' => $eventId,
+            'user_id' => (int) $user['id'],
         ]);
         $event = $stmt->fetch() ?: null;
-    }
-    if ($event === null && $requestedEventId === 0 && $requestedToken !== '') {
-        $event = app_fetch_share_event_by_token($db, $requestedToken);
-        if ($event !== null && (int) $event['profile_id'] !== $profileId) {
-            $event = null;
+        if ($event === null) {
+            http_response_code(404);
+            app_render('Not found', '<section class="page narrow"><div class="card"><h1>共有イベントが見つかりません</h1></div></section>', ['user' => $user]);
+            return;
         }
-    }
-    if ($event === null && $requestedEventId === 0 && $requestedToken === '') {
-        $recent = app_fetch_recent_events($db, $profileId, 1);
-        if ($recent !== []) {
-            $event = $recent[0];
+        $profile = [
+            'id' => (int) $event['profile_id'],
+            'user_id' => (int) $event['user_id'],
+            'display_name' => (string) ($event['profile_display_name'] ?? ''),
+            'profile_name' => (string) ($event['profile_name'] ?? ''),
+            'avatar_url' => (string) ($event['profile_avatar_url'] ?? ''),
+        ];
+    } elseif ($draftMode && $requestedProfileId > 0 && $requestedToken !== '') {
+        $profile = app_fetch_profile($db, $requestedProfileId);
+        if (!$profile || (int) $profile['user_id'] !== (int) $user['id']) {
+            http_response_code(404);
+            app_render('Not found', '<section class="page narrow"><div class="card"><h1>共有プロフィールが見つかりません</h1></div></section>', ['user' => $user]);
+            return;
         }
+    } else {
+        http_response_code(404);
+        app_render('Not found', '<section class="page narrow"><div class="card"><h1>QRが見つかりません</h1></div></section>', ['user' => $user]);
+        return;
     }
 
-    $token = $requestedToken !== '' ? $requestedToken : ($event ? (string) $event['public_token'] : '');
+    $token = $event ? (string) $event['public_token'] : $requestedToken;
     $shareUrl = $token !== '' ? app_url('/s/' . $token) : app_url('/dashboard');
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&ecc=H&data=' . rawurlencode($shareUrl);
-    $avatarUrl = app_profile_display_avatar_url($profile, $user);
+    $displayName = trim((string) ($profile['display_name'] ?? ''));
+    if ($displayName === '') {
+        $displayName = '1G1A';
+    }
+    $avatarUrl = app_profile_display_avatar_url($profile ?: [], $user);
     $noticeJa = $draftMode && $event === null
         ? '通信できない時は、この画面を写真で撮っておいてください。あとでQRからアクセスできます。'
         : '私のプロフィールと連絡先です。この画面を写真で撮って、あとでQRからアクセスしてください。';
@@ -1065,10 +993,10 @@ function render_profile_qr(?PDO $db, int $profileId): void
     ?>
 <section class="page qr-page">
   <div class="card qr-card">
-    <h1><?= app_h((string) $profile['display_name']) ?></h1>
+    <h1><?= app_h($displayName) ?></h1>
     <div class="qr-frame">
       <img class="qr-code-image" src="<?= $qrUrl ?>" alt="QR code">
-      <?= app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'qr-center-avatar') ?>
+      <?= app_render_profile_avatar($avatarUrl, $displayName, 'qr-center-avatar') ?>
     </div>
     <div class="qr-copy">
       <p><?= app_h($noticeJa) ?></p>
@@ -1133,7 +1061,7 @@ function handle_share_event_save(?PDO $db, bool $syncMode): void
             app_json(['ok' => true, 'event_id' => (int) $event['id'], 'public_token' => (string) $event['public_token'], 'public_url' => $publicUrl]);
         }
         app_flash($syncMode ? '共有イベントを同期しました。' : 'QR を作成しました。');
-        app_redirect('/profiles/' . (int) $event['profile_id'] . '/qr?event=' . (int) $event['id']);
+        app_redirect('/share-events/' . (int) $event['id'] . '/qr');
     } catch (Throwable $e) {
         if (isset($_SERVER['HTTP_ACCEPT']) && str_contains((string) $_SERVER['HTTP_ACCEPT'], 'application/json')) {
             app_json(['ok' => false, 'error' => $e->getMessage()], 422);
