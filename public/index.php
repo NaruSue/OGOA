@@ -1045,7 +1045,7 @@ function render_profile_qr(?PDO $db, int $profileId): void
 
     $token = $requestedToken !== '' ? $requestedToken : ($event ? (string) $event['public_token'] : '');
     $shareUrl = $token !== '' ? app_url('/s/' . $token) : app_url('/dashboard');
-    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=' . rawurlencode($shareUrl);
+    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&ecc=H&data=' . rawurlencode($shareUrl);
     $avatarUrl = app_profile_display_avatar_url($profile, $user);
     $noticeJa = $draftMode && $event === null
         ? '通信できない時は、この画面を写真で撮っておいてください。あとでQRからアクセスできます。'
@@ -1069,7 +1069,7 @@ function render_profile_qr(?PDO $db, int $profileId): void
   <div class="card qr-card">
     <h1><?= app_h((string) $profile['display_name']) ?></h1>
     <div class="qr-frame">
-      <img src="<?= $qrUrl ?>" alt="QR code">
+      <img class="qr-code-image" src="<?= $qrUrl ?>" alt="QR code">
       <?= app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'qr-center-avatar') ?>
     </div>
     <?php if ($messageJa !== ''): ?>

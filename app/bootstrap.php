@@ -610,7 +610,7 @@ function app_render_profile_avatar(?string $avatarUrl, string $label, string $cl
         $avatarSize = match ($className) {
             'avatar-preview' => 112,
             'avatar-mini' => 44,
-            'qr-center-avatar' => 48,
+            'qr-center-avatar' => 34,
             default => 140,
         };
 
