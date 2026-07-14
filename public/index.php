@@ -1053,16 +1053,6 @@ function render_profile_qr(?PDO $db, int $profileId): void
     $noticeEn = $draftMode && $event === null
         ? 'If the connection is weak, please take a photo of this screen and visit from the QR later.'
         : 'My profile and contact links are here. Please take a photo of this screen and visit from the QR later.';
-    $messageJa = trim((string) ($event['body'] ?? ''));
-    $photos = $event ? app_fetch_share_event_photos($db, (int) $event['id']) : [];
-    $photoHtml = '';
-    foreach ($photos as $photo) {
-        $photoHtml .= '<img src="' . app_h(app_url('/media/' . basename((string) $photo['storage_path']))) . '" alt="共有写真" loading="lazy">';
-    }
-    $hasLocation = $event !== null && $event['latitude'] !== null && $event['longitude'] !== null;
-    $locationStatus = $hasLocation ? '取得済み' : ($event ? '未取得' : '未同期');
-    $uploadStatus = $event ? (((string) ($event['status'] ?? 'ready')) === 'ready' ? 'アップロード済み' : '準備中') : '未アップロード';
-    $syncStatus = $draftMode && $event === null ? '同期待ち' : '同期済み';
     ob_start();
     ?>
 <section class="page qr-page">
@@ -1072,11 +1062,6 @@ function render_profile_qr(?PDO $db, int $profileId): void
       <img class="qr-code-image" src="<?= $qrUrl ?>" alt="QR code">
       <?= app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'qr-center-avatar') ?>
     </div>
-    <?php if ($messageJa !== ''): ?>
-    <div class="qr-message">
-      <p><?= nl2br(app_h($messageJa)) ?></p>
-    </div>
-    <?php endif; ?>
     <div class="qr-copy">
       <p><?= app_h($noticeJa) ?></p>
       <p class="muted"><?= app_h($noticeEn) ?></p>
@@ -1085,32 +1070,6 @@ function render_profile_qr(?PDO $db, int $profileId): void
       <span>URL</span>
       <a href="<?= app_h($shareUrl) ?>"><?= app_h($shareUrl) ?></a>
     </div>
-  </div>
-  <div class="card qr-detail-card">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Event detail</p>
-        <h2>共有イベント内容</h2>
-      </div>
-      <span class="status-pill <?= $event ? 'public' : 'pending' ?>"><?= app_h($syncStatus) ?></span>
-    </div>
-    <div class="status-grid">
-      <div><span>アップロード</span><strong><?= app_h($uploadStatus) ?></strong></div>
-      <div><span>位置情報</span><strong><?= app_h($locationStatus) ?></strong></div>
-      <div><span>写真</span><strong><?= count($photos) ?>枚</strong></div>
-    </div>
-    <?php if ($messageJa !== ''): ?>
-      <div class="message-box">
-        <div class="message-head"><span class="guest-badge">共有メッセージ</span></div>
-        <p><?= nl2br(app_h($messageJa)) ?></p>
-      </div>
-    <?php endif; ?>
-    <?php if ($photoHtml !== ''): ?>
-      <h3>共有写真</h3>
-      <div class="photo-grid">
-        <?= $photoHtml ?>
-      </div>
-    <?php endif; ?>
   </div>
 </section>
     <?php
