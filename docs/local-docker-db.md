@@ -40,7 +40,7 @@ docker compose up -d postgres
 Production database settings are kept in server-local runtime config.
 
 ```text
-config/db.env or .env
+.env
 ```
 
 Do not commit production credentials to Git.

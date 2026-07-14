@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+TARGET=${1:-main}
+
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/../devscripts/lib.sh"
 
-APP_ROOT=${APP_ROOT:-/home/codex/1g1a/web}
+APP_ROOT=${APP_ROOT:-$(cd -- "$SCRIPT_DIR/.." && pwd)}
 IMAGE=${IMAGE:-1g1a-app:latest}
 CONTAINER=${CONTAINER:-1g1a-app}
 APP_URL=${APP_URL:-https://1g1a.loose.bz}
 LOCAL_HEALTHCHECK_URL=${LOCAL_HEALTHCHECK_URL:-http://127.0.0.1:8080/}
 PUBLIC_HEALTHCHECK_URL=${PUBLIC_HEALTHCHECK_URL:-https://1g1a.loose.bz/}
-DB_ENV_FILE=${DB_ENV_FILE:-"$APP_ROOT/config/db.env"}
+DB_ENV_FILE=${DB_ENV_FILE:-"$APP_ROOT/.env"}
 NGINX_CONF_SOURCE=${NGINX_CONF_SOURCE:-"$APP_ROOT/deploy/1g1a.nginx.conf"}
 NGINX_CONF_TARGET=${NGINX_CONF_TARGET:-/etc/nginx/conf.d/1g1a.conf}
 STORAGE_DIR=${STORAGE_DIR:-"$APP_ROOT/storage"}
@@ -20,6 +22,21 @@ cd "$APP_ROOT"
 load_env_file "$DB_ENV_FILE"
 
 require_commands sudo docker curl psql
+
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "working_tree_dirty"
+    git status --short
+    exit 1
+fi
+
+git fetch origin --prune
+if git rev-parse --verify --quiet "origin/$TARGET" >/dev/null; then
+    target_sha=$(git rev-parse "origin/$TARGET")
+else
+    target_sha=$(git rev-parse "$TARGET")
+fi
+
+git checkout --detach "$target_sha"
 
 sudo docker build -t "$IMAGE" .
 sudo docker run --rm "$IMAGE" php -l app/bootstrap.php

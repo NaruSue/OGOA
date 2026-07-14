@@ -1,6 +1,7 @@
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot '.env'),
-    [string]$Distro = $null
+    [string]$Distro = $null,
+    [string]$Target = 'main'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -83,7 +84,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "WSL deploy script not found in distro ${Distro}: $scriptWsl"
 }
 
-$command = 'cd {0} && bash {1}' -f (Escape-BashSingleQuote $repoRootWsl), (Escape-BashSingleQuote $scriptWsl)
+$command = 'cd {0} && bash {1} {2}' -f (Escape-BashSingleQuote $repoRootWsl), (Escape-BashSingleQuote $scriptWsl), (Escape-BashSingleQuote $Target)
 
 Write-Host "Running deployment through WSL distro: $Distro"
 Write-Host "Log files will be written under logs/deploy"
