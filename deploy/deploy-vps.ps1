@@ -77,7 +77,7 @@ function Escape-BashSingleQuote {
 }
 
 $repoRootWsl = Convert-ToWslPath -Path $repoRoot
-$scriptWsl = "$repoRootWsl/deploy/deploy-wsl.sh"
+$scriptWsl = "$repoRootWsl/deploy/deploy.sh"
 
 $scriptExists = & wsl.exe -d $Distro -- test -f $scriptWsl
 if ($LASTEXITCODE -ne 0) {

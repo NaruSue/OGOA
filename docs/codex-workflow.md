@@ -9,8 +9,8 @@ This repository uses two distinct environments:
 
 - Start local development from WSL Ubuntu 24.04.
 - Keep PowerShell usage limited to Windows-specific tasks or WSL launch commands.
-- Treat `deploy/deploy-vps.sh` as the script that runs on the VPS.
-- Treat `deploy/deploy-wsl.sh` as the local WSL helper that SSHes into the VPS and starts the VPS deploy script.
+- Treat `deploy/deploy.sh` as the canonical deploy script on the target machine.
+- Invoke it from any host or transport layer as needed; keep environment-specific launchers outside the shared deploy flow.
 - Treat `deploy/deploy-vps.ps1` as a launcher only.
 - Put reusable shell helpers under `devscripts/`.
 - Do not hardcode passwords, private keys, host credentials, or production `.env` values in scripts.
@@ -79,5 +79,4 @@ OAuth HTTPS, Secure cookie, and certificate-sensitive checks.
 
 - `devscripts/context.sh`: capture repo state and search results for analysis
 - `deploy/deploy-vps.ps1`: start the deployment flow from Windows
-- `deploy/deploy-wsl.sh`: perform the local WSL-side deployment packaging and upload
-- `deploy/deploy-vps.sh`: execute the final deployment on the VPS
+- `deploy/deploy.sh`: execute the deployment steps on the target machine
