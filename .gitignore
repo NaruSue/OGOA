@@ -12,11 +12,13 @@ composer.lock
 # Logs
 *.log
 logs/
+.deploy-state/
 
 # Local generated history / tools
 .history-*/
 .scripts/
 scripts/*.sh
+!scripts/setup-wsl-nginx.sh
 
 # OS / editor
 .DS_Store

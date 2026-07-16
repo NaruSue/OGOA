@@ -10,7 +10,7 @@ source "$APP_ROOT/devscripts/lib.sh"
 
 CONFIG_PATH=${DEPLOY_CONFIG:-"$SCRIPT_DIR/.env"}
 LOG_DIR=${DEPLOY_LOG_DIR:-"$APP_ROOT/logs/deploy"}
-REMOTE_ROOT=${DEPLOY_REMOTE_ROOT:-/home/codex/1g1a/web}
+REMOTE_ROOT=${DEPLOY_REMOTE_ROOT:-~/1g1a/web}
 
 LOG_FILE=$(init_log_file "$LOG_DIR" deploy)
 
@@ -57,7 +57,7 @@ SSH_KEY_COPY=$(prepare_ssh_key "$DEPLOY_SSH_KEY")
 DEPLOY_SSH_KEY="$SSH_KEY_COPY"
 
 remote_target=$(printf '%q' "$TARGET")
-remote_root=$(printf '%q' "$REMOTE_ROOT")
+remote_root=$REMOTE_ROOT
 
 run_logged "$LOG_FILE" ssh -p "$DEPLOY_SSH_PORT" -i "$DEPLOY_SSH_KEY" -o BatchMode=yes "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" "cd $remote_root && bash deploy/deploy-vps.sh $remote_target"
 
