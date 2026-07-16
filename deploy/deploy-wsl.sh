@@ -59,7 +59,7 @@ DEPLOY_SSH_KEY="$SSH_KEY_COPY"
 remote_target=$(printf '%q' "$TARGET")
 remote_root=$REMOTE_ROOT
 
-run_logged "$LOG_FILE" ssh -p "$DEPLOY_SSH_PORT" -i "$DEPLOY_SSH_KEY" -o BatchMode=yes "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" "cd $remote_root && bash deploy/deploy-vps.sh $remote_target"
+run_logged "$LOG_FILE" ssh -p "$DEPLOY_SSH_PORT" -i "$DEPLOY_SSH_KEY" -o BatchMode=yes "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" "cd $remote_root && bash deploy/deploy.sh $remote_target"
 
 log_line "$LOG_FILE" "Deployment finished successfully"
 printf 'Deployment complete. Log: %s\n' "$LOG_FILE"
