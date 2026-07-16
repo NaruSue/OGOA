@@ -501,6 +501,18 @@ function render_dashboard(?PDO $db): void
           <option value="30d">1か月</option>
         </select>
       </label>
+      <div class="location-option" data-location-option>
+        <div class="location-option-row">
+          <span>位置情報をつける</span>
+          <label class="switch-control" aria-label="位置情報をつける">
+            <input type="hidden" name="attach_location" value="0">
+            <input type="checkbox" name="attach_location" id="attach-location" value="1" checked disabled>
+            <span class="switch-slider" aria-hidden="true"></span>
+          </label>
+        </div>
+        <p class="muted location-hint" id="location-enabled-hint" hidden>位置情報をつけると地図を添付できます</p>
+        <p class="muted location-hint" id="location-disabled-hint">位置情報を許可すると使えます</p>
+      </div>
       <div class="launch-actions">
         <button class="button primary" type="submit" data-publish="1">QRを作成</button>
       </div>
@@ -1085,11 +1097,11 @@ function render_share_event_qr(?PDO $db, ?int $eventId): void
     }
     $avatarUrl = app_profile_display_avatar_url($profile ?: [], $user);
     $noticeJa = $draftMode && $event === null
-        ? '通信できない時は、この画面を写真で撮っておいてください。あとでQRからアクセスできます。'
-        : '私のプロフィールと連絡先です。この画面を写真で撮って、あとでQRからアクセスしてください。';
+        ? 'この画面を撮影してあとでQRからアクセスしてください。'
+        : '私のプロフィールと連絡先です。この画面を撮影して後からQRでアクセスしてください。';
     $noticeEn = $draftMode && $event === null
-        ? 'If the connection is weak, please take a photo of this screen and visit from the QR later.'
-        : 'My profile and contact links are here. Please take a photo of this screen and visit from the QR later.';
+        ? 'Please take a photo of this screen and access it via the QR code later.'
+        : 'Here are my profile and contact info. Please take a photo of this screen and access it via the QR code later.';
     ob_start();
     ?>
 <section class="page qr-page">
@@ -1104,7 +1116,7 @@ function render_share_event_qr(?PDO $db, ?int $eventId): void
       <p class="muted"><?= app_h($noticeEn) ?></p>
     </div>
     <div class="qr-url">
-      <span>URL</span>
+      <!--<span>URL</span>-->
       <a href="<?= app_h($shareUrl) ?>"><?= app_h($shareUrl) ?></a>
     </div>
   </div>
@@ -1115,7 +1127,6 @@ function render_share_event_qr(?PDO $db, ?int $eventId): void
         (string) ob_get_clean(),
         [
             'user' => $user,
-            'meta' => '<script>window.__QR_LOCATION_CAPTURE=true;window.__QR_EVENT_ID=' . json_encode($event ? (int) $event['id'] : null) . ';window.__QR_EVENT_TOKEN=' . json_encode($token) . ';</script>',
             'chrome' => false,
         ]
     );
@@ -1149,6 +1160,17 @@ function handle_share_event_save(?PDO $db, bool $syncMode): void
     }
 
     $payload = $_POST;
+    $uploadMeta = [];
+    if (isset($_FILES['photos']) && is_array($_FILES['photos'])) {
+        $uploadMeta = [
+            'token' => (string) ($_POST['public_token'] ?? ''),
+            'names' => $_FILES['photos']['name'] ?? [],
+            'types' => $_FILES['photos']['type'] ?? [],
+            'errors' => $_FILES['photos']['error'] ?? [],
+            'sizes' => $_FILES['photos']['size'] ?? [],
+        ];
+        error_log(date('c') . ' request ' . json_encode($uploadMeta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, app_root('logs/upload-debug.log'));
+    }
     $photos = [];
     if (!empty($_FILES['photos'])) {
         $photos = app_normalize_uploaded_files($_FILES['photos']);
@@ -1164,6 +1186,7 @@ function handle_share_event_save(?PDO $db, bool $syncMode): void
         app_flash($syncMode ? '共有イベントを同期しました。' : 'QR を作成しました。');
         app_redirect('/share-events/' . (int) $event['id'] . '/qr');
     } catch (Throwable $e) {
+        error_log(date('c') . ' failure ' . json_encode(['token' => (string) ($_POST['public_token'] ?? ''), 'exception' => get_class($e), 'message' => $e->getMessage(), 'files' => $uploadMeta, 'request' => ['content_length' => $_SERVER['CONTENT_LENGTH'] ?? null, 'content_type' => $_SERVER['CONTENT_TYPE'] ?? null, 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null], 'limits' => ['upload_max_filesize' => ini_get('upload_max_filesize'), 'post_max_size' => ini_get('post_max_size'), 'max_file_uploads' => ini_get('max_file_uploads')], 'storage_free_bytes' => @disk_free_space(app_root('storage/uploads'))], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, app_root('logs/upload-debug.log'));
         if (isset($_SERVER['HTTP_ACCEPT']) && str_contains((string) $_SERVER['HTTP_ACCEPT'], 'application/json')) {
             app_json(['ok' => false, 'error' => $e->getMessage()], 422);
         }
@@ -1189,6 +1212,9 @@ function api_share_event_location(?PDO $db, int $eventId): void
         if (!$event || (int) $event['user_id'] !== (int) $user['id']) {
             app_json(['error' => 'not_found'], 404);
         }
+    }
+    if (!filter_var($event['attach_location'] ?? true, FILTER_VALIDATE_BOOLEAN)) {
+        app_json(['error' => 'location_disabled'], 409);
     }
     $latitude = (float) ($_POST['latitude'] ?? 0);
     $longitude = (float) ($_POST['longitude'] ?? 0);

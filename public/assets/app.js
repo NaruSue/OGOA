@@ -124,6 +124,7 @@
     form.append('expires_in', draft.expires_in || '24h');
     form.append('public_token', draft.public_token);
     form.append('status', 'ready');
+    form.append('attach_location', draft.attach_location === false ? '0' : '1');
     if (draft.reserve_token) {
       form.append('reserve_token', draft.reserve_token);
     }
@@ -188,8 +189,57 @@
     const bodyInput = document.getElementById('share-body');
     const photosInput = document.getElementById('share-photos');
     const expiresInput = document.getElementById('share-expires');
+    const attachLocationInput = document.getElementById('attach-location');
+    const locationEnabledHint = document.getElementById('location-enabled-hint');
+    const locationDisabledHint = document.getElementById('location-disabled-hint');
     const status = document.getElementById('draft-status');
     const csrf = form.querySelector('input[name="_csrf"]')?.value || '';
+    function setLocationAvailability(granted) {
+      if (!attachLocationInput) return;
+      const wasDisabled = attachLocationInput.disabled;
+      attachLocationInput.disabled = !granted;
+      if (!granted) {
+        attachLocationInput.checked = false;
+      } else if (wasDisabled) {
+        attachLocationInput.checked = true;
+      }
+      if (locationEnabledHint) locationEnabledHint.hidden = !granted;
+      if (locationDisabledHint) locationDisabledHint.hidden = granted;
+    }
+
+    async function initializeLocationOption() {
+      if (!attachLocationInput || !navigator.geolocation) {
+        setLocationAvailability(false);
+        return;
+      }
+      if (!navigator.permissions?.query) {
+        setLocationAvailability(true);
+        return;
+      }
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        const applyPermission = () => setLocationAvailability(permission.state !== 'denied');
+        applyPermission();
+        permission.addEventListener?.('change', applyPermission);
+      } catch (err) {
+        setLocationAvailability(true);
+      }
+    }
+
+    function captureLocation() {
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            captured_at: new Date().toISOString(),
+          }),
+          () => resolve(null),
+          { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
+        );
+      });
+    }
 
     async function topUp() {
       const profileId = profileSelect ? profileSelect.value : '';
@@ -199,6 +249,7 @@
     }
 
     await topUp();
+    await initializeLocationOption();
 
     if (profileSelect) {
       profileSelect.addEventListener('change', topUp);
@@ -213,6 +264,12 @@
         return;
       }
 
+      const shouldAttachLocation = Boolean(attachLocationInput && !attachLocationInput.disabled && attachLocationInput.checked);
+      let location = null;
+      if (shouldAttachLocation) {
+        if (status) status.textContent = '位置情報を取得しています。';
+        location = await captureLocation();
+      }
       const publicToken = await pickToken(profileId);
       const files = Array.from(photosInput?.files || []).map((file) => ({
         name: file.name,
@@ -224,6 +281,11 @@
         profile_id: Number(profileId),
         body: bodyInput ? bodyInput.value : '',
         expires_in: expiresInput ? expiresInput.value : '24h',
+        attach_location: shouldAttachLocation,
+        latitude: location?.latitude ?? null,
+        longitude: location?.longitude ?? null,
+        accuracy: location?.accuracy ?? null,
+        location_captured_at: location?.captured_at ?? null,
         reserve_token: reserveToken,
         csrf,
         photos: files,
@@ -259,36 +321,6 @@
       }
       window.location.href = '/share-events/qr?profile=' + encodeURIComponent(profileId) + '&token=' + encodeURIComponent(publicToken) + '&draft=1';
     });
-  }
-
-  async function handleQrPage() {
-    if (!window.__QR_LOCATION_CAPTURE) {
-      return;
-    }
-
-    const eventId = window.__QR_EVENT_ID;
-    if (!eventId || !navigator.geolocation) {
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      try {
-        const body = new URLSearchParams({
-          _csrf: document.querySelector('input[name="_csrf"]')?.value || '',
-          public_token: window.__QR_EVENT_TOKEN || '',
-          latitude: String(position.coords.latitude),
-          longitude: String(position.coords.longitude),
-          accuracy: String(position.coords.accuracy),
-        });
-        await fetch('/share-events/' + eventId + '/location', {
-          method: 'POST',
-          headers: { 'Accept': 'application/json' },
-          body,
-        });
-      } catch (err) {
-        console.warn('location save failed', err);
-      }
-    }, () => {}, { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 });
   }
 
 
@@ -411,7 +443,6 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     handleDashboard();
-    handleQrPage();
     handleContactEditor();
     handleGuestContactActions();
     syncPending();

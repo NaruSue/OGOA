@@ -734,10 +734,17 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
         $expiresIn = '24h';
     }
 
+    $attachLocationRaw = $payload['attach_location'] ?? null;
+    $attachLocation = !array_key_exists('attach_location', $payload)
+        || in_array(strtolower(trim((string) $attachLocationRaw)), ['1', 'true', 'on', 'yes'], true);
+
     $latitude = $payload['latitude'] ?? null;
     $longitude = $payload['longitude'] ?? null;
     $accuracy = $payload['location_accuracy_m'] ?? null;
     $capturedAt = $payload['location_captured_at'] ?? null;
+    if (!$attachLocation) {
+        $latitude = $longitude = $accuracy = $capturedAt = null;
+    }
 
     $exists = $db->prepare('SELECT id FROM share_events WHERE public_token = :token LIMIT 1');
     $exists->execute(['token' => $token]);
@@ -750,6 +757,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
                  body = :body,
                  status = :status,
                  expires_in = :expires_in,
+                 attach_location = :attach_location,
                  latitude = :latitude,
                  longitude = :longitude,
                  location_accuracy_m = :accuracy,
@@ -763,6 +771,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
             'body' => $body,
             'status' => $status,
             'expires_in' => $expiresIn,
+            'attach_location' => $attachLocation ? 'true' : 'false',
             'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
             'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
             'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,
@@ -775,8 +784,8 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
         }
     } else {
         $stmt = $db->prepare(
-            'INSERT INTO share_events (profile_id, public_token, body, status, expires_in, latitude, longitude, location_accuracy_m, location_captured_at)
-             VALUES (:profile_id, :public_token, :body, :status, :expires_in, :latitude, :longitude, :accuracy, :captured_at)
+            'INSERT INTO share_events (profile_id, public_token, body, status, expires_in, attach_location, latitude, longitude, location_accuracy_m, location_captured_at)
+             VALUES (:profile_id, :public_token, :body, :status, :expires_in, :attach_location, :latitude, :longitude, :accuracy, :captured_at)
              RETURNING *'
         );
         $stmt->execute([
@@ -785,6 +794,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
             'body' => $body,
             'status' => $status,
             'expires_in' => $expiresIn,
+            'attach_location' => $attachLocation ? 'true' : 'false',
             'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
             'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
             'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,

@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE share_events
+    ADD COLUMN IF NOT EXISTS attach_location BOOLEAN NOT NULL DEFAULT TRUE;
+
+COMMIT;

@@ -34,15 +34,11 @@
 
 - [ ] IndexedDBの保存データを設計項目に合わせる。
   - 設計: `client_request_id`, `share_event_token`, `created_at`, `retry_count`, `last_error`, `sync_status`, `location` を持つ。
-  - 実装: `pendingShareEvents` は `public_token`, `profile_id`, `body`, `expires_in`, `photos`, `publish`, `synced_at` などに留まる。
+  - 実装: `pendingShareEvents` は位置情報ON/OFF、緯度・経度・精度・取得日時まで保存するようになったが、`client_request_id`, `retry_count`, `last_error`, `sync_status` は未実装。
 
 - [ ] 同期失敗時の再試行状態を保存する。
   - 設計: 同期失敗時に再試行でき、失敗状態が分かる。
   - 実装: 失敗時は `console.warn` のみで、`retry_count` や `last_error` を保存していない。
-
-- [ ] オフラインQR表示時の位置情報保存方針を合わせる。
-  - 設計: コメント、写真、位置情報をIndexedDBへ保存し、通信復帰時にサーバへ同期する。
-  - 実装: QR画面の位置情報保存はサーバ上の `event_id` がある場合だけ動く。未同期ドラフトQRでは位置情報を取得・保存しない。
 
 ## ルーティング / 画面構成
 
@@ -66,6 +62,13 @@
   - 設計: 同じイベント内で同じニックネームを別のゲストが使用しても、各ゲストには自分が送信したメッセージだけを表示する。
   - 実装: イベント別CookieにはゲストID（`viewer_token`）を保存しているが、履歴は `share_event_id` と `guest_name` で取得しているため、同名の別ゲストの履歴も表示される可能性がある。
   - 対応方針: `guest_messages` とゲストIDを関連付け、履歴取得条件を `share_event_id` と `viewer_token` に変更する。
+
+## 共有イベントアクセス制限
+
+- [ ] 表示想定人数を使ったゲストアクセス制限を実装する。
+  - 設計: 表示想定人数はデフォルト `3` とし、イベント別Cookieのゲスト識別ID数が「表示想定人数 × 3」以上になった時点でアクセスを制限する。
+  - 理由: 1人がPCやスマートフォンなど最大3端末・ブラウザからアクセスする可能性を見込む。
+  - 実装: 表示想定人数の入力、保存、アクセス制限、制限時画面は未実装。
 
 ## テスト / CI
 

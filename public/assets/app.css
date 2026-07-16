@@ -231,6 +231,16 @@ p:last-child { margin-bottom: 0; }
 .form textarea { min-height: 120px; resize: vertical; }
 .checkbox { display: flex !important; align-items: center; gap: 10px; font-weight: 500 !important; }
 .checkbox input { width: auto; min-height: auto; }
+.location-option { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, 0.72); }
+.location-option-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 700; }
+.form .switch-control { display: inline-flex; width: 54px; height: 30px; position: relative; flex: 0 0 54px; }
+.form .switch-control input { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; opacity: 0; }
+.switch-slider { position: absolute; inset: 0; border-radius: 999px; background: #b7b0a7; transition: background 0.18s ease; cursor: pointer; }
+.switch-slider::after { content: ""; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; border-radius: 50%; background: #fff; box-shadow: 0 2px 7px rgba(31, 26, 23, 0.24); transition: transform 0.18s ease; }
+.switch-control input:checked + .switch-slider { background: var(--accent); }
+.switch-control input:checked + .switch-slider::after { transform: translateX(24px); }
+.switch-control input:disabled + .switch-slider { opacity: 0.45; cursor: not-allowed; }
+.location-hint { margin: 0; font-size: 0.88rem; line-height: 1.5; }
 
 .launch-headline {
   display: grid;
