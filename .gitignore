@@ -1,4 +1,4 @@
-﻿# Environment
+# Environment
 .env
 .env.local
 .env.*.local
@@ -17,8 +17,9 @@ logs/
 # Local generated history / tools
 .history-*/
 .scripts/
+.codex-vps-edit/
+deploy/1g1a.wsl.nginx.conf
 scripts/*.sh
-!scripts/setup-wsl-nginx.sh
 
 # OS / editor
 .DS_Store
