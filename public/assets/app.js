@@ -299,8 +299,34 @@
     handleContactEditor();
     handleGuestSkinPicker();
     handleGuestContactActions();
+    handleGuestPhotoGallery();
     handlePwaInstall();
   });
+
+  function handleGuestPhotoGallery() {
+    const dialog = document.querySelector('[data-guest-photo-dialog]');
+    const image = dialog?.querySelector('[data-guest-photo-dialog-image]');
+    const caption = dialog?.querySelector('[data-guest-photo-dialog-caption]');
+    if (!dialog || !image || typeof dialog.showModal !== 'function') return;
+
+    document.querySelectorAll('[data-guest-photo-open]').forEach((button) => {
+      button.addEventListener('click', () => {
+        image.src = button.dataset.photoSrc || '';
+        image.alt = button.dataset.photoAlt || '共有写真';
+        if (caption) caption.textContent = image.alt;
+        dialog.showModal();
+      });
+    });
+
+    dialog.querySelector('[data-guest-photo-close]')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+      image.removeAttribute('src');
+      image.alt = '';
+    });
+  }
 
   function handleGuestSkinPicker() {
     const picker = document.querySelector('.guest-skin-picker');

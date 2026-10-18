@@ -1538,8 +1538,7 @@ function render_share_event(?PDO $db, string $token, string $method): void
         $photos = app_fetch_share_event_photos($db, (int) $event['id']);
         $links = app_fetch_profile_links($db, (int) $event['profile_id']);
         $messages = app_fetch_share_event_messages($db, (int) $event['id']);
-        $editProfileUrl = app_url('/profiles/' . (int) $event['profile_id'] . '/edit?' . http_build_query(['return_to' => '/s/' . $token]));
-        app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $ownerName, $photos, $links, $messages, false, $editProfileUrl), ['chrome' => false, 'guest_skin' => $event['guest_skin_id'] ?? 'light']);
+        app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $ownerName, $photos, $links, $messages, false), ['chrome' => false, 'guest_skin' => $event['guest_skin_id'] ?? 'light']);
         return;
     }
 
@@ -1711,7 +1710,7 @@ function render_guest_message_box(string $token): string
     return (string) ob_get_clean();
 }
 
-function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = [], bool $showMessageBox = true, ?string $ownerEditUrl = null): string
+function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = [], bool $showMessageBox = true): string
 {
     $profileDisplayName = app_guest_display_name($event);
     $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
@@ -1720,8 +1719,10 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
     $message = trim((string) ($event['body'] ?? ''));
 
     $photoHtml = '';
-    foreach ($photos as $photo) {
-        $photoHtml .= '<img src="' . app_h(app_url('/media/' . basename((string) $photo['storage_path']))) . '" alt="共有写真" loading="lazy">';
+    foreach ($photos as $index => $photo) {
+        $photoUrl = app_url('/media/' . basename((string) $photo['storage_path']));
+        $photoNumber = $index + 1;
+        $photoHtml .= '<button class="guest-photo-button" type="button" data-guest-photo-open data-photo-src="' . app_h($photoUrl) . '" data-photo-alt="共有写真 ' . $photoNumber . '" aria-label="共有写真 ' . $photoNumber . ' を拡大して表示"><img src="' . app_h($photoUrl) . '" alt="共有写真 ' . $photoNumber . '" loading="lazy"><span class="guest-photo-zoom" aria-hidden="true"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></span></button>';
     }
 
     $linkHtml = '';
@@ -1766,13 +1767,17 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
   </header>
 
   <section class="card guest-card guest-event-card">
+    <div class="guest-memory-heading">
+      <p class="eyebrow">Today's memory</p>
+      <?php if ($photoHtml !== ''): ?><div class="guest-memory-title"><h2>共有した写真</h2><span><?= count($photos) ?>枚</span></div><?php endif; ?>
+    </div>
     <?php if ($message !== ''): ?>
-      <div class="message-box">
+      <div class="message-box guest-event-message">
         <p><?= nl2br(app_h($message)) ?></p>
       </div>
     <?php endif; ?>
     <?php if ($photoHtml !== ''): ?>
-      <div class="photo-grid">
+      <div class="photo-grid guest-photo-grid" role="group" aria-label="共有写真">
         <?= $photoHtml ?>
       </div>
     <?php endif; ?>
@@ -1780,8 +1785,12 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
   </section>
 
   <section class="card guest-card guest-profile-card">
-    <p class="eyebrow">Profile</p>
-    <h2>プロフィール</h2>
+    <div class="guest-profile-heading">
+      <div>
+        <p class="eyebrow">Profile</p>
+        <h2>プロフィール</h2>
+      </div>
+    </div>
     <div class="hero-profile">
       <?= app_render_profile_avatar($profileAvatarUrl, $profileDisplayName) ?>
       <div class="guest-profile-copy">
@@ -1802,11 +1811,6 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
         </div>
       </div>
     <?php endif; ?>
-    <?php if ($ownerEditUrl !== null): ?>
-      <div class="section-actions owner-profile-actions">
-        <a class="button secondary" href="<?= app_h($ownerEditUrl) ?>">この共有プロフィールを編集</a>
-      </div>
-    <?php endif; ?>
   </section>
 
   <?php if ($showMessageBox || $messageHistoryHtml !== ''): ?>
@@ -1824,6 +1828,11 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
     </section>
   <?php endif; ?>
 </section>
+<dialog class="guest-photo-dialog" data-guest-photo-dialog aria-label="共有写真を拡大表示">
+  <button class="guest-photo-dialog-close" type="button" data-guest-photo-close aria-label="写真を閉じる"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+  <img data-guest-photo-dialog-image alt="">
+  <p data-guest-photo-dialog-caption></p>
+</dialog>
 <footer class="guest-footer">
   <a class="guest-app-link" href="<?= app_h(app_url('/')) ?>">
     <span class="guest-app-icon">1G1A</span>
