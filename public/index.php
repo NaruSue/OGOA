@@ -51,7 +51,7 @@ if ($path === '/auth/google' && $method === 'POST' && isset($_POST['demo'])) {
 
     $user = app_demo_user($db);
     app_demo_profile($db, (int) $user['id']);
-    app_login_user($user);
+    app_login_user($db, $user);
     app_flash('デモでログインしました。');
     app_redirect('/dashboard');
 }
@@ -107,7 +107,7 @@ if ($path === '/auth/google/callback' && $method === 'GET') {
 
     $user = app_upsert_user_from_google($db, $profile);
     app_ensure_starter_profile($db, (int) $user['id'], (string) $user['name'], (string) ($user['account_display_name'] ?? $user['name']));
-    app_login_user($user);
+    app_login_user($db, $user);
     app_flash('ログインしました。');
     app_redirect('/dashboard');
 }

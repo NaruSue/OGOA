@@ -329,12 +329,92 @@ function app_current_user(PDO $db): ?array
     return $user ?: null;
 }
 
-function app_login_user(array $user): void
+function app_login_user(PDO $db, array $user): void
 {
     app_start_session();
     $_SESSION['user_id'] = (int) $user['id'];
     $_SESSION['user_name'] = (string) $user['name'];
     $_SESSION['user_email'] = (string) $user['email'];
+    app_purge_expired_share_events($db, (int) $user['id']);
+}
+
+function app_purge_expired_share_events(PDO $db, int $userId): int
+{
+    $storagePaths = [];
+    $deletedCount = 0;
+
+    try {
+        $db->beginTransaction();
+        $expiredEvents = $db->prepare(
+            "SELECT se.id, photo.storage_path
+             FROM share_events se
+             INNER JOIN profiles p ON p.id = se.profile_id
+             LEFT JOIN share_event_photos photo ON photo.share_event_id = se.id
+             WHERE p.user_id = :user_id
+               AND se.expires_at IS NOT NULL
+               AND se.expires_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
+             ORDER BY se.id
+             FOR UPDATE OF se"
+        );
+        $expiredEvents->execute(['user_id' => $userId]);
+        $eventIds = [];
+        foreach ($expiredEvents->fetchAll() as $row) {
+            $eventIds[(int) $row['id']] = true;
+            if (is_string($row['storage_path'] ?? null) && $row['storage_path'] !== '') {
+                $storagePaths[] = $row['storage_path'];
+            }
+        }
+
+        if ($eventIds !== []) {
+            $deleteMessages = $db->prepare(
+                "DELETE FROM guest_messages gm
+                 USING share_events se
+                 INNER JOIN profiles p ON p.id = se.profile_id
+                 WHERE gm.share_event_id = se.id
+                   AND p.user_id = :user_id
+                   AND se.expires_at IS NOT NULL
+                   AND se.expires_at < CURRENT_TIMESTAMP - INTERVAL '30 days'"
+            );
+            $deleteMessages->execute(['user_id' => $userId]);
+
+            $deleteEvents = $db->prepare(
+                "DELETE FROM share_events se
+                 USING profiles p
+                 WHERE p.id = se.profile_id
+                   AND p.user_id = :user_id
+                   AND se.expires_at IS NOT NULL
+                   AND se.expires_at < CURRENT_TIMESTAMP - INTERVAL '30 days'"
+            );
+            $deleteEvents->execute(['user_id' => $userId]);
+            $deletedCount = $deleteEvents->rowCount();
+        }
+        $db->commit();
+    } catch (Throwable $error) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log('Expired share event cleanup failed: ' . $error->getMessage());
+        return 0;
+    }
+
+    $uploadsDirectory = realpath(app_root('storage/uploads'));
+    if ($uploadsDirectory !== false) {
+        $uploadsPrefix = rtrim($uploadsDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        foreach (array_unique($storagePaths) as $storagePath) {
+            if (preg_match('#\Auploads/share_event_[a-f0-9]{32}\.(?:jpg|png|webp|gif)\z#i', $storagePath) !== 1) {
+                continue;
+            }
+            $filePath = realpath(app_root('storage/' . $storagePath));
+            if ($filePath === false || !str_starts_with($filePath, $uploadsPrefix) || !is_file($filePath)) {
+                continue;
+            }
+            if (!@unlink($filePath)) {
+                error_log('Unable to delete expired share event photo file.');
+            }
+        }
+    }
+
+    return $deletedCount;
 }
 
 function app_logout_user(): void
