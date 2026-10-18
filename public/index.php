@@ -488,7 +488,8 @@ function render_dashboard(?PDO $db): void
         if ($headline !== '') {
             $profilePreviews .= '<p class="profile-preview-headline">' . app_h($headline) . '</p>';
         }
-        $profilePreviews .= '<p class="profile-preview-bio">' . ($bio !== '' ? nl2br(app_h($bio)) : '紹介文は未設定です。') . '</p></div></div>';
+        $profilePreviews .= '<p class="profile-preview-bio">' . ($bio !== '' ? nl2br(app_h($bio)) : '紹介文は未設定です。') . '</p>';
+        $profilePreviews .= '<a class="button secondary profile-preview-edit" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">プロフィールを編集</a></div></div>';
     }
 
     ob_start();
