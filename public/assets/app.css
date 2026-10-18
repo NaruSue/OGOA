@@ -955,6 +955,7 @@ button.button { font: inherit; font-weight: 700; }
 
 .sync-banner { background: rgba(15, 122, 69, 0.08); border-color: rgba(15, 122, 69, 0.16); }
 .draft-banner { background: rgba(216, 107, 33, 0.09); border-color: rgba(216, 107, 33, 0.15); }
+.draft-banner[hidden] { display: none; }
 
 .offline-state {
   display: grid;
