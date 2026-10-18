@@ -123,6 +123,16 @@ if ($path === '/dashboard') {
     exit;
 }
 
+if ($path === '/share-events' && $method === 'GET') {
+    render_share_events($db);
+    exit;
+}
+
+if ($path === '/help' && $method === 'GET') {
+    render_help($db);
+    exit;
+}
+
 if ($path === '/pwa/install' && $method === 'GET') {
     render_pwa_install_guide($db);
     exit;
@@ -453,45 +463,30 @@ function render_dashboard(?PDO $db): void
         $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' - ' . app_h((string) $profile['display_name']) . '</option>';
     }
 
-    $eventPageSize = 5;
-    $eventCount = app_count_dashboard_events($db, (int) $user['id']);
-    $eventPageCount = max(1, (int) ceil($eventCount / $eventPageSize));
-    $eventPage = max(1, min((int) ($_GET['events_page'] ?? 1), $eventPageCount));
-    $dashboardEvents = app_fetch_dashboard_events(
-        $db,
-        (int) $user['id'],
-        $eventPageSize,
-        ($eventPage - 1) * $eventPageSize
-    );
-    $eventRows = '';
-    foreach ($dashboardEvents as $event) {
-        $createdAt = strtotime((string) ($event['created_at'] ?? ''));
-        $eventDate = $createdAt !== false ? date('Y年n月j日 H:i', $createdAt) : '';
-        $profileName = trim((string) ($event['profile_name'] ?? ''));
-        if ($profileName === '') {
-            $profileName = (string) ($event['profile_display_name'] ?? '共有プロフィール');
-        }
-        $message = preg_replace('/\s+/u', ' ', trim((string) ($event['body'] ?? ''))) ?? '';
-        if ($message === '') {
-            $message = 'メッセージなし';
-        } elseif (function_exists('mb_strimwidth')) {
-            $message = mb_strimwidth($message, 0, 72, '…', 'UTF-8');
-        } elseif (strlen($message) > 72) {
-            $message = substr($message, 0, 69) . '...';
-        }
-        $eventRows .= '<a class="event-row" href="' . app_h(app_url('/share-events/' . (int) $event['id'] . '/qr')) . '">';
-        $eventRows .= '<span class="event-row-main"><span class="event-row-meta"><strong>' . app_h($profileName) . '</strong><time datetime="' . app_h((string) ($event['created_at'] ?? '')) . '">' . app_h($eventDate) . '</time></span>';
-        $eventRows .= '<p>' . app_h($message) . '</p></span></a>';
-    }
-
     $statusLine = 'オンライン中に共有イベントを作成します。表示済みで期限内のQRは、オフラインでも開けます。';
     $createAction = app_h(app_url('/share-events/create'));
     $csrf = app_h(app_csrf_token());
-    $profileHint = $profiles !== [] ? 'まず共有プロフィールを選んでください。' : '共有プロフィールがまだありません。';
     $activeProfile = $profiles[0] ?? null;
     $activeProfileId = $activeProfile !== null ? (int) $activeProfile['id'] : 0;
     $activeProfileTabId = $activeProfileId > 0 ? 'profile-tab-' . $activeProfileId : '';
     $activeProfileName = $activeProfile !== null ? (string) $activeProfile['profile_name'] : '';
+    $profilePreviews = '';
+    foreach ($profiles as $index => $profile) {
+        $profileId = (int) $profile['id'];
+        $profileName = (string) ($profile['profile_name'] ?? '共有プロフィール');
+        $displayName = trim((string) ($profile['display_name'] ?? ''));
+        $headline = trim((string) ($profile['headline'] ?? ''));
+        $bio = trim((string) ($profile['bio'] ?? ''));
+        $avatarUrl = app_profile_display_avatar_url($profile, $user);
+        $profilePreviews .= '<div class="profile-preview" data-profile-preview="' . $profileId . '"' . ($index === 0 ? '' : ' hidden') . '>';
+        $profilePreviews .= app_render_profile_avatar($avatarUrl, $displayName !== '' ? $displayName : $profileName, 'profile-preview-avatar');
+        $profilePreviews .= '<div class="profile-preview-copy"><p class="eyebrow">QRに表示するプロフィール</p>';
+        $profilePreviews .= '<h2>' . app_h($displayName !== '' ? $displayName : $profileName) . '</h2>';
+        if ($headline !== '') {
+            $profilePreviews .= '<p class="profile-preview-headline">' . app_h($headline) . '</p>';
+        }
+        $profilePreviews .= '<p class="profile-preview-bio">' . ($bio !== '' ? nl2br(app_h($bio)) : '紹介文は未設定です。') . '</p></div></div>';
+    }
 
     ob_start();
     ?>
@@ -510,9 +505,10 @@ function render_dashboard(?PDO $db): void
         <select name="profile_id" id="profile-select" required class="profile-select-native" aria-hidden="true" tabindex="-1">
           <?= $profileOptions ?>
         </select>
-        <p class="profile-picker-hint">タブを切り替えると、QRに使うプロフィールが変わります。</p>
+        <p class="profile-picker-hint">タブを切り替えると、画像や紹介文を確認できます。</p>
       </fieldset>
       <div class="share-profile-panel" id="share-profile-panel" role="tabpanel"<?= $activeProfileTabId !== '' ? ' aria-labelledby="' . app_h($activeProfileTabId) . '"' : '' ?> tabindex="-1">
+        <?= $profilePreviews ?>
         <p class="profile-selected-label" id="profile-selected-label" aria-live="polite"><?= $activeProfileName !== '' ? app_h($activeProfileName) . 'のプロフィールでQRを作成します。' : 'プロフィールを選ぶと、そのプロフィールでQRを作成します。' ?></p>
         <label>今日のメッセージ <span class="optional">任意</span>
           <textarea name="body" id="share-body" rows="4" maxlength="2000" placeholder="今日はありがとうございました。"></textarea>
@@ -550,44 +546,65 @@ function render_dashboard(?PDO $db): void
   </div>
 </section>
 
-<section class="page">
-  <div class="section-head">
-    <div>
-      <p class="eyebrow">Share events</p>
-      <h2>共有イベント</h2>
-    </div>
-    <?php if ($eventCount > 0): ?>
-      <span class="muted"><?= $eventCount ?> 件</span>
-    <?php endif; ?>
-  </div>
-  <div class="event-list">
-    <?= $eventRows !== '' ? $eventRows : '<div class="empty">表示できる共有イベントはまだありません。</div>' ?>
-  </div>
-  <?php if ($eventPageCount > 1): ?>
-    <nav class="pagination" aria-label="共有イベントのページ">
-      <?php if ($eventPage > 1): ?>
-        <a class="button secondary" href="<?= app_h(app_url('/dashboard?events_page=' . ($eventPage - 1))) ?>">前へ</a>
-      <?php else: ?>
-        <span class="button secondary disabled" aria-disabled="true">前へ</span>
-      <?php endif; ?>
-      <span class="pagination-state"><?= $eventPage ?> / <?= $eventPageCount ?></span>
-      <?php if ($eventPage < $eventPageCount): ?>
-        <a class="button secondary" href="<?= app_h(app_url('/dashboard?events_page=' . ($eventPage + 1))) ?>">次へ</a>
-      <?php else: ?>
-        <span class="button secondary disabled" aria-disabled="true">次へ</span>
-      <?php endif; ?>
-    </nav>
-  <?php endif; ?>
-</section>
-
-<section class="page narrow dashboard-help">
-  <details class="help-accordion">
-    <summary>使い方</summary>
-    <p><?= app_h($profileHint) ?> 必要ならメッセージと写真を追加して、QRを作成します。プロフィールの追加・編集は左上の1G1Aメニューから行えます。</p>
-  </details>
-</section>
     <?php
     app_render('Dashboard', (string) ob_get_clean(), ['user' => $user, 'flash' => false]);
+}
+
+function render_share_events(?PDO $db): void
+{
+    if ($db === null) {
+        app_render('共有イベント', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
+        return;
+    }
+    $user = app_current_user($db);
+    if (!$user) {
+        app_redirect('/login');
+    }
+
+    $events = app_fetch_share_event_history($db, (int) $user['id']);
+    $rows = '';
+    foreach ($events as $event) {
+        $createdAt = strtotime((string) ($event['created_at'] ?? ''));
+        $eventDate = $createdAt !== false ? date('Y年n月j日 H:i', $createdAt) : '';
+        $profileName = trim((string) ($event['profile_name'] ?? ''));
+        if ($profileName === '') {
+            $profileName = trim((string) ($event['profile_display_name'] ?? '共有プロフィール'));
+        }
+        $message = preg_replace('/\s+/u', ' ', trim((string) ($event['body'] ?? ''))) ?? '';
+        if ($message === '') {
+            $message = 'メッセージなし';
+        } elseif (function_exists('mb_strimwidth')) {
+            $message = mb_strimwidth($message, 0, 72, '…', 'UTF-8');
+        } elseif (strlen($message) > 72) {
+            $message = substr($message, 0, 69) . '...';
+        }
+        $expiresAt = !empty($event['expires_at']) ? strtotime((string) $event['expires_at']) : false;
+        $isExpired = $expiresAt !== false && $expiresAt < time();
+        $rowContent = '<span class="event-row-main"><span class="event-row-meta"><strong>' . app_h($profileName) . '</strong><span class="event-row-date"><time datetime="' . app_h((string) ($event['created_at'] ?? '')) . '">' . app_h($eventDate) . '</time>' . ($isExpired ? '<span class="event-expired">期限切れ</span>' : '') . '</span></span><p>' . app_h($message) . '</p></span>';
+        if ($isExpired) {
+            $rows .= '<div class="event-row is-expired" aria-label="' . app_h($profileName . '、期限切れ、' . $eventDate . '、' . $message) . '">' . $rowContent . '</div>';
+        } else {
+            $rows .= '<a class="event-row" href="' . app_h(app_url('/share-events/' . (int) $event['id'] . '/qr')) . '">' . $rowContent . '</a>';
+        }
+    }
+    $eventCount = count($events);
+    $emptyMessage = '共有イベントはまだありません。QRを作成すると、ここに履歴が表示されます。';
+    $content = '<section class="page"><div class="section-head"><div><p class="eyebrow">Share events</p><h1>共有イベント</h1></div><span class="muted">' . $eventCount . ' 件</span></div><div class="event-list">' . ($rows !== '' ? $rows : '<div class="empty">' . app_h($emptyMessage) . '</div>') . '</div><div class="section-actions"><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">QR作成へ戻る</a></div></section>';
+    app_render('共有イベント', $content, ['user' => $user]);
+}
+
+function render_help(?PDO $db): void
+{
+    if ($db === null) {
+        app_render('使い方', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
+        return;
+    }
+    $user = app_current_user($db);
+    if (!$user) {
+        app_redirect('/login');
+    }
+    $content = '<section class="page narrow"><div class="card help-page"><p class="eyebrow">How to use</p><h1>使い方</h1><ol class="help-steps"><li><strong>プロフィールを選ぶ</strong><span>ダッシュボード上部のタブを切り替え、画像・表示名・紹介文を確認します。編集は1G1Aメニューの「共有プロフィール」から行えます。</span></li><li><strong>今回のメッセージや写真を追加する</strong><span>必要な場合だけ入力します。何も追加せずにQRを作成することもできます。</span></li><li><strong>QRを作成して見せる</strong><span>オンラインでQRを作成し、相手に読み取ってもらいます。位置情報は設定が許可されている場合だけ取得します。</span></li><li><strong>作成済みQRを開く</strong><span>メニューの「共有イベント」から履歴を開き、期限内のイベントをタップするとQRを再表示できます。</span></li></ol><h2>ホーム画面に追加</h2><p>1G1Aメニューの「ホーム画面に追加」から端末に合わせた手順を確認できます。インストールしたPWAではログイン状態を90日間保持し、期限内にキャッシュ済みのQRをオフラインでも表示できます。</p><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">ダッシュボードへ戻る</a></div></section>';
+    app_render('使い方', $content, ['user' => $user]);
 }
 
 function render_news(?PDO $db): void
@@ -1268,6 +1285,8 @@ function render_share_event_qr(?PDO $db, int $eventId): void
         [
             'user' => $user,
             'meta' => '<meta name="1g1a-qr-expires-at" content="' . $expiresAt . '"><meta name="1g1a-qr-title" content="' . app_h($displayName) . '">',
+            'footer' => '<a class="qr-home-link" href="' . app_h(app_url('/dashboard')) . '" aria-label="ダッシュボードへ戻る" title="ダッシュボードへ戻る"><i class="fa-solid fa-house" aria-hidden="true"></i></a>',
+            'qr_footer' => true,
             'chrome' => false,
         ]
     );

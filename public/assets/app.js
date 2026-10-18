@@ -3,7 +3,7 @@
     if (!navigator.onLine || !('serviceWorker' in navigator)) return;
     try {
       await navigator.serviceWorker.ready;
-      const links = Array.from(document.querySelectorAll('.event-list a.event-row'));
+      const links = Array.from(document.querySelectorAll('.event-list a.event-row')).slice(0, 5);
       await Promise.all(links.map(async (link) => {
         try {
           const response = await fetch(link.href, { credentials: 'same-origin' });
@@ -37,6 +37,7 @@
     const locationEnabledHint = document.getElementById('location-enabled-hint');
     const locationDisabledHint = document.getElementById('location-disabled-hint');
     const profileTabs = Array.from(document.querySelectorAll('[data-profile-tab]'));
+    const profilePreviews = Array.from(document.querySelectorAll('[data-profile-preview]'));
     const profilePanel = document.getElementById('share-profile-panel');
     const selectedProfileLabel = document.getElementById('profile-selected-label');
 
@@ -94,6 +95,9 @@
         item.tabIndex = active ? 0 : -1;
       });
       if (profilePanel && tab.id) profilePanel.setAttribute('aria-labelledby', tab.id);
+      profilePreviews.forEach((preview) => {
+        preview.hidden = preview.dataset.profilePreview !== (tab.dataset.profileTab || '');
+      });
       if (selectedProfileLabel) {
         const profileName = tab.dataset.profileName || tab.textContent.trim();
         selectedProfileLabel.textContent = `${profileName}のプロフィールでQRを作成します。`;

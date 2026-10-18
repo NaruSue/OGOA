@@ -667,22 +667,7 @@ function app_fetch_recent_events(PDO $db, int $profileId, int $limit = 5): array
     return $stmt->fetchAll() ?: [];
 }
 
-function app_count_dashboard_events(PDO $db, int $userId): int
-{
-    $stmt = $db->prepare(
-        "SELECT COUNT(*)
-         FROM share_events se
-         INNER JOIN profiles p ON p.id = se.profile_id
-         WHERE p.user_id = :user_id
-           AND se.status = 'ready'
-           AND (se.expires_at IS NULL OR se.expires_at >= CURRENT_TIMESTAMP)"
-    );
-    $stmt->execute(['user_id' => $userId]);
-
-    return (int) $stmt->fetchColumn();
-}
-
-function app_fetch_dashboard_events(PDO $db, int $userId, int $limit = 5, int $offset = 0): array
+function app_fetch_share_event_history(PDO $db, int $userId): array
 {
     $stmt = $db->prepare(
         "SELECT se.*, p.profile_name, p.display_name AS profile_display_name
@@ -690,14 +675,9 @@ function app_fetch_dashboard_events(PDO $db, int $userId, int $limit = 5, int $o
          INNER JOIN profiles p ON p.id = se.profile_id
          WHERE p.user_id = :user_id
            AND se.status = 'ready'
-           AND (se.expires_at IS NULL OR se.expires_at >= CURRENT_TIMESTAMP)
-         ORDER BY se.created_at DESC, se.id DESC
-         LIMIT :limit OFFSET :offset"
+         ORDER BY se.created_at DESC, se.id DESC"
     );
-    $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
-    $stmt->bindValue(':limit', max(1, $limit), PDO::PARAM_INT);
-    $stmt->bindValue(':offset', max(0, $offset), PDO::PARAM_INT);
-    $stmt->execute();
+    $stmt->execute(['user_id' => $userId]);
 
     return $stmt->fetchAll() ?: [];
 }
@@ -1227,8 +1207,10 @@ function app_render(string $title, string $body, array $context = []): void
     $flash = app_flash();
     $user = $context['user'] ?? null;
     $meta = $context['meta'] ?? '';
+    $footerContent = $context['footer'] ?? '';
     $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
+    $qrFooter = !empty($context['qr_footer']);
     $version = app_version();
     $cssVersion = $version;
     $jsVersion = $version;
@@ -1257,17 +1239,15 @@ function app_render(string $title, string $body, array $context = []): void
     if ($chrome) {
         echo '<header class="topbar">';
         if ($user) {
-            echo '<details class="brand-menu"><summary class="brand brand-menu-trigger" aria-label="1G1A メニュー" title="1G1A メニュー"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span><i class="fa-solid fa-chevron-down brand-menu-caret" aria-hidden="true"></i></summary><nav class="brand-menu-panel" aria-label="アプリメニュー"><ul><li><a href="' . app_h(app_url('/news')) . '">新着情報</a></li><li><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a></li><li><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a></li><li><a href="' . app_h(app_url('/pwa/install')) . '" data-pwa-install>ホーム画面に追加</a></li><li><a href="' . app_h(app_url('/logout')) . '">ログアウト</a></li></ul><span class="app-version">v' . app_h($version) . '</span></nav></details>';
+            echo '<details class="brand-menu"><summary class="brand brand-menu-trigger" aria-label="1G1A メニュー" title="1G1A メニュー"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span><i class="fa-solid fa-chevron-down brand-menu-caret" aria-hidden="true"></i></summary><nav class="brand-menu-panel" aria-label="アプリメニュー"><ul><li><a href="' . app_h(app_url('/dashboard')) . '">QR作成</a></li><li><a href="' . app_h(app_url('/share-events')) . '">共有イベント</a></li><li><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a></li><li><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a></li><li><a href="' . app_h(app_url('/news')) . '">新着情報</a></li><li><a href="' . app_h(app_url('/help')) . '">使い方</a></li><li><a href="' . app_h(app_url('/pwa/install')) . '" data-pwa-install>ホーム画面に追加</a></li><li><a href="' . app_h(app_url('/logout')) . '">ログアウト</a></li></ul><span class="app-version">v' . app_h($version) . '</span></nav></details>';
         } else {
             echo '<a class="brand" href="' . app_h(app_url('/')) . '"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span></a>';
         }
-        echo '<nav class="nav">';
-        if ($user) {
-            echo '<a class="icon-nav" href="' . app_h(app_url('/dashboard')) . '" aria-label="Home" title="Home"><i class="fa-solid fa-house" aria-hidden="true"></i></a>';
-        } else {
+        if (!$user) {
+            echo '<nav class="nav">';
             echo "<a class=\"icon-nav\" href=\"/\" aria-label=\"Home\" title=\"Home\"><i class=\"fa-solid fa-house\" aria-hidden=\"true\"></i></a>";
+            echo '</nav>';
         }
-        echo '</nav>';
         if ($user) {
             $accountName = (string) ($user['account_display_name'] ?? $user['name'] ?? 'User');
             echo '<a class="user-chip" href="' . app_h(app_url('/account')) . '">' . app_render_profile_avatar(app_account_avatar_url($user), $accountName, 'avatar-mini') . '<span>' . app_h($accountName) . '</span></a>';
@@ -1278,7 +1258,7 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<div class="flash">' . app_h($flash) . '</div>';
     }
     echo $body;
-    echo '<footer class="app-footer"><span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
+    echo '<footer class="app-footer' . ($qrFooter ? ' app-footer-qr' : '') . '">' . (is_string($footerContent) ? $footerContent : '') . '<span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
     echo '</div>';
     echo '</body></html>';
 }

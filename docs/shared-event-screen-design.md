@@ -46,13 +46,20 @@ The shared event page reached from the QR code should be organized into three bl
 - The photo input may also allow taking a new photo with the camera, but it must not force the camera-only flow.
 - On mobile browsers, avoid the `capture` attribute for the normal event photo input because it can bypass the photo picker and immediately open the camera.
 
-## Dashboard List Notes
+## Shared Event List Notes
 
-- The logged-in dashboard should show a compact list of share events.
-- Each row should show the event date, the shared profile name, and a short message snippet.
-- Expired events should not be listed.
-- Each row should link to the guest-facing QR page for that event.
+- The shared event list should be a separate screen linked from the app menu.
+- Show all eligible events without pagination.
+- Each row should use the shared profile name as its heading and show the event date and a short message snippet.
+- Keep expired events in the history until login cleanup removes them 30 days after expiry.
+- Label expired rows and do not link them to the QR display page; only unexpired events can reopen a QR.
 - The QR icon in the list should be avoided if it is not used for the main workflow.
+- Show the latest five unexpired QR pages in the background cache. Cache older QR pages when the user opens them online.
+
+## QR Return Link
+
+- Show a dashboard icon in the footer of the QR display page so the owner can return to the dashboard.
+- Do not show event details on the QR display page.
 
 ## Guest Flow Notes
 

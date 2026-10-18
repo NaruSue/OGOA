@@ -112,6 +112,21 @@ a:hover { text-decoration: underline; }
   text-align: center;
 }
 
+.qr-home-link {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 0 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.15rem;
+}
+.qr-home-link:hover { color: #fff; text-decoration: none; filter: brightness(1.08); }
+.qr-home-link:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
+.app-footer-qr { display: grid; justify-items: center; gap: 8px; }
+
 .flash {
   margin-bottom: 16px;
   padding: 14px 16px;
@@ -303,22 +318,32 @@ p:last-child { margin-bottom: 0; }
 .profile-select-native { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
 .profile-picker-hint { margin: 2px 0 0; color: var(--muted); font-size: 0.88rem; }
 .share-profile-panel { display: grid; gap: 10px; }
+.profile-preview {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.66);
+}
+.profile-preview[hidden] { display: none; }
+.profile-preview-avatar {
+  width: 76px;
+  height: 76px;
+  max-width: 76px;
+  max-height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.profile-preview-copy { min-width: 0; }
+.profile-preview-copy .eyebrow { margin: 0 0 3px; font-size: 0.7rem; }
+.profile-preview-copy h2 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.profile-preview-headline { margin: 3px 0 0; font-weight: 700; }
+.profile-preview-bio { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; white-space: normal; overflow-wrap: anywhere; }
 .profile-selected-label { margin: 0; color: var(--accent); font-size: 0.92rem; font-weight: 700; }
-.dashboard-help { margin-top: -4px; }
-.help-accordion {
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
-}
-.help-accordion summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-weight: 700;
-}
-.help-accordion p {
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
 .publish-steps {
   display: grid;
   gap: 12px;
@@ -459,6 +484,14 @@ p:last-child { margin-bottom: 0; }
   gap: 12px;
   flex-wrap: wrap;
 }
+.event-row-date { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.event-expired { padding: 2px 7px; border-radius: 999px; background: rgba(154, 90, 0, 0.1); color: var(--warning); font-size: 0.76rem; font-weight: 700; }
+.event-row.is-expired { color: var(--muted); opacity: 0.78; }
+.help-page h1, .help-page h2 { margin-top: 0; }
+.help-steps { display: grid; gap: 14px; margin: 0; padding-left: 1.5rem; }
+.help-steps li { padding-left: 4px; }
+.help-steps strong, .help-steps span { display: block; }
+.help-steps span { margin-top: 4px; color: var(--muted); }
 
 .event-row-meta strong {
   font-size: 1rem;
@@ -474,19 +507,6 @@ p:last-child { margin-bottom: 0; }
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.pagination-state {
-  color: var(--muted);
-  font-size: 0.94rem;
 }
 
 .button.disabled {
