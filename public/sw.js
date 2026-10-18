@@ -118,7 +118,11 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.webmanifest') {
-    event.respondWith(caches.match(request, { ignoreSearch: true }).then((cached) => cached || fetch(request)));
+    event.respondWith(
+      caches.open(SHELL_CACHE)
+        .then((cache) => cache.match(request))
+        .then((cached) => cached || fetch(request))
+    );
     return;
   }
 
