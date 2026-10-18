@@ -509,10 +509,15 @@ function render_dashboard(?PDO $db): void
         <label>今日のメッセージ <span class="optional">任意</span>
           <textarea name="body" id="share-body" rows="4" maxlength="2000" placeholder="今日はありがとうございました。"></textarea>
         </label>
-        <label class="upload-field">写真を追加 <span class="optional">複数可 / カメラ起動可</span>
-          <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
-          <span class="upload-note">共有イベントの作成と写真の送信にはオンライン接続が必要です。</span>
-        </label>
+        <div class="upload-field launch-photo-upload">
+          <div class="upload-field-heading"><strong>写真を追加</strong><span class="optional">複数選択・カメラ撮影ができます</span></div>
+          <div class="launch-photo-control">
+            <span class="launch-photo-summary" id="share-photo-summary">写真は選択されていません</span>
+            <label class="launch-photo-button">写真を選ぶ
+              <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" multiple aria-describedby="share-photo-summary">
+            </label>
+          </div>
+        </div>
         <label>QRの有効期限
           <select name="expires_in" id="share-expires">
             <option value="24h" selected>24時間</option>

@@ -33,6 +33,8 @@
 
     const profileSelect = document.getElementById('profile-select');
     const status = document.getElementById('draft-status');
+    const photoInput = document.getElementById('share-photos');
+    const photoSummary = document.getElementById('share-photo-summary');
     const attachLocationInput = document.getElementById('attach-location');
     const locationEnabledHint = document.getElementById('location-enabled-hint');
     const locationDisabledHint = document.getElementById('location-disabled-hint');
@@ -97,6 +99,14 @@
 
     profileSelect?.addEventListener('change', () => activateProfile(profileSelect.value));
     activateProfile(profileSelect?.value || '');
+
+    photoInput?.addEventListener('change', () => {
+      if (!photoSummary) return;
+      const files = Array.from(photoInput.files || []);
+      photoSummary.textContent = files.length === 0
+        ? '写真は選択されていません'
+        : files.length === 1 ? files[0].name : `${files.length}枚選択中`;
+    });
 
     initializeLocationOption();
 
