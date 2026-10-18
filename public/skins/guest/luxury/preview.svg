@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" role="img" aria-label="ラグジュアリーテーマのプレビュー">
   <defs>
-    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#19140f"/><stop offset="1" stop-color="#332618"/></linearGradient>
-    <linearGradient id="gold"><stop stop-color="#b38b45"/><stop offset=".5" stop-color="#f1d99d"/><stop offset="1" stop-color="#b38b45"/></linearGradient>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#e8e6d9"/><stop offset=".52" stop-color="#faf5e9"/><stop offset="1" stop-color="#e4d7bd"/></linearGradient>
+    <linearGradient id="gold"><stop stop-color="#b7954d"/><stop offset=".5" stop-color="#ead9a8"/><stop offset="1" stop-color="#b7954d"/></linearGradient>
   </defs>
   <rect width="320" height="150" rx="18" fill="url(#bg)"/>
-  <rect x="18" y="15" width="284" height="120" rx="14" fill="#211b15" stroke="url(#gold)" stroke-width="2"/>
-  <rect x="31" y="28" width="82" height="78" rx="8" fill="#2c241b" stroke="#80663b"/>
-  <circle cx="72" cy="67" r="22" fill="#d4b169"/><circle cx="72" cy="67" r="13" fill="#21190d"/>
-  <rect x="129" y="37" width="138" height="10" rx="5" fill="#f6eddd"/>
-  <rect x="129" y="57" width="106" height="7" rx="3.5" fill="#e1c27c"/>
-  <rect x="129" y="75" width="146" height="7" rx="3.5" fill="#89785d"/>
-  <rect x="129" y="94" width="82" height="23" rx="5" fill="url(#gold)"/>
+  <rect x="18" y="15" width="284" height="120" rx="14" fill="#fffdf7" stroke="url(#gold)" stroke-width="2"/>
+  <rect x="31" y="28" width="82" height="78" rx="8" fill="#f4eddd" stroke="#cdb77e"/>
+  <circle cx="72" cy="67" r="22" fill="#315b49"/><circle cx="72" cy="67" r="13" fill="#ead9a8"/>
+  <rect x="129" y="37" width="138" height="10" rx="5" fill="#33291b"/>
+  <rect x="129" y="57" width="106" height="7" rx="3.5" fill="#b7954d"/>
+  <rect x="129" y="75" width="146" height="7" rx="3.5" fill="#a69a84"/>
+  <rect x="129" y="94" width="82" height="23" rx="5" fill="#315b49"/>
 </svg>
