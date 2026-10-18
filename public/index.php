@@ -1059,6 +1059,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         <input type="checkbox" name="is_public" value="1"<?= $checked ?>> 利用する
       </label>
       <div class="profile-form-actions">
+        <a class="button secondary" href="<?= app_h(app_url('/dashboard')) ?>">QR作成へ戻る</a>
         <a class="button secondary" href="<?= app_h(app_url('/profiles')) ?>">一覧へ戻る</a>
         <button class="button primary" type="submit"><?= app_h($button) ?></button>
       </div>
