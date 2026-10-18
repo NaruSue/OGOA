@@ -373,11 +373,18 @@ button.button { font: inherit; font-weight: 700; }
 }
 .profile-preview-copy { min-width: 0; }
 .profile-preview-copy { display: grid; justify-items: start; gap: 5px; }
-.profile-preview-copy .eyebrow { margin: 0 0 3px; font-size: 0.7rem; }
+.profile-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
+.profile-preview-copy .eyebrow { margin: 0; font-size: 0.7rem; }
 .profile-preview-copy h2 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
 .profile-preview-headline { margin: 3px 0 0; font-weight: 700; }
 .profile-preview-bio { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; white-space: normal; overflow-wrap: anywhere; }
-.profile-preview-edit { width: 100%; margin-top: 8px; min-width: 180px; justify-content: center; }
+.profile-preview-edit { flex: 0 0 40px; color: var(--muted); text-decoration: none; }
+.profile-preview-edit:hover { color: var(--accent); border-color: rgba(15, 91, 102, 0.3); background: rgba(15, 91, 102, 0.06); }
+.profile-preview-edit:focus-visible { outline: 3px solid rgba(15, 91, 102, 0.24); outline-offset: 2px; }
+.offline-guidance { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 14px; border: 1px solid rgba(15, 91, 102, 0.14); border-radius: 14px; background: rgba(15, 91, 102, 0.055); color: var(--text); line-height: 1.6; }
+.offline-guidance > i { margin-top: 3px; color: var(--accent); }
+.offline-guidance strong { display: block; font-size: 0.9rem; }
+.offline-guidance p { margin: 2px 0 0; color: var(--muted); font-size: 0.88rem; }
 .launch-settings .upload-field { min-width: 0; }
 .launch-settings .launch-actions { display: grid; }
 .launch-settings .launch-actions .button { width: 100%; min-height: 52px; }
@@ -1025,7 +1032,6 @@ button.button { font: inherit; font-weight: 700; }
   .launch-card .launch-profiles { gap: 12px; }
   .profile-preview { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; min-height: 0; padding: 16px; }
   .profile-preview-avatar { width: 72px; height: 72px; max-width: 72px; max-height: 72px; }
-  .profile-preview-edit { min-width: 0; }
   .launch-card .form,
   .form {
     gap: 8px;

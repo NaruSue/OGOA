@@ -466,7 +466,6 @@ function render_dashboard(?PDO $db): void
         $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' — ' . app_h((string) $profile['display_name']) . '</option>';
     }
 
-    $statusLine = 'オンライン中に共有イベントを作成します。表示済みで期限内のQRは、オフラインでも開けます。';
     $createAction = app_h(app_url('/share-events/create'));
     $csrf = app_h(app_csrf_token());
     $profilePreviews = '';
@@ -479,13 +478,13 @@ function render_dashboard(?PDO $db): void
         $avatarUrl = app_profile_display_avatar_url($profile, $user);
         $profilePreviews .= '<div class="profile-preview" data-profile-preview="' . $profileId . '"' . ($index === 0 ? '' : ' hidden') . '>';
         $profilePreviews .= app_render_profile_avatar($avatarUrl, $displayName !== '' ? $displayName : $profileName, 'profile-preview-avatar');
-        $profilePreviews .= '<div class="profile-preview-copy"><p class="eyebrow">' . app_h($profileName) . '</p>';
+        $profilePreviews .= '<div class="profile-preview-copy"><div class="profile-preview-heading"><p class="eyebrow">' . app_h($profileName) . '</p>';
+        $profilePreviews .= '<a class="icon-button profile-preview-edit" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '" aria-label="プロフィールを編集" title="プロフィールを編集"><i class="fa-solid fa-pen" aria-hidden="true"></i></a></div>';
         $profilePreviews .= '<h2>' . app_h($displayName !== '' ? $displayName : $profileName) . '</h2>';
         if ($headline !== '') {
             $profilePreviews .= '<p class="profile-preview-headline">' . app_h($headline) . '</p>';
         }
-        $profilePreviews .= '<p class="profile-preview-bio">' . ($bio !== '' ? nl2br(app_h($bio)) : '紹介文は未設定です。') . '</p>';
-        $profilePreviews .= '<a class="button secondary profile-preview-edit" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">プロフィールを編集</a></div></div>';
+        $profilePreviews .= '<p class="profile-preview-bio">' . ($bio !== '' ? nl2br(app_h($bio)) : '紹介文は未設定です。') . '</p></div></div>';
     }
 
     ob_start();
@@ -537,7 +536,11 @@ function render_dashboard(?PDO $db): void
         <div class="launch-actions">
           <button class="button primary" type="submit" data-publish="1">QRを作成</button>
         </div>
-        <div class="draft-banner" id="draft-status" role="status" aria-live="polite"><?= app_h($statusLine) ?></div>
+        <aside class="offline-guidance" aria-label="オフライン時の利用について">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <div><strong>オフラインではQRを新しく作成できません。</strong><p>期限内で、以前この端末で開いたQRは表示できます。</p></div>
+        </aside>
+        <div class="draft-banner" id="draft-status" role="status" aria-live="polite" hidden></div>
       </div>
       </div>
     </form>

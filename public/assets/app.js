@@ -38,6 +38,12 @@
     const locationDisabledHint = document.getElementById('location-disabled-hint');
     const profilePreviews = Array.from(document.querySelectorAll('[data-profile-preview]'));
 
+    function setStatus(message) {
+      if (!status) return;
+      status.hidden = false;
+      status.textContent = message;
+    }
+
     function setLocationAvailability(available) {
       if (!attachLocationInput) return;
       const wasDisabled = attachLocationInput.disabled;
@@ -97,7 +103,7 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!navigator.onLine) {
-        if (status) status.textContent = 'QRの作成にはオンライン接続が必要です。通信を確認してからもう一度お試しください。';
+        setStatus('QRの作成にはインターネット接続が必要です。通信を確認してからもう一度お試しください。');
         return;
       }
 
@@ -107,12 +113,12 @@
         submitButton.disabled = true;
         submitButton.textContent = 'QRを作成しています…';
       }
-      if (status) status.textContent = 'QRを作成しています。完了まで画面を閉じずにお待ちください。';
+      setStatus('QRを作成しています。完了まで画面を閉じずにお待ちください。');
       try {
         const formData = new FormData(form);
         const shouldAttachLocation = Boolean(attachLocationInput && !attachLocationInput.disabled && attachLocationInput.checked);
         if (shouldAttachLocation) {
-          if (status) status.textContent = '位置情報を取得しています。許可しない場合も、数秒後にQR作成へ進みます。';
+          setStatus('位置情報を取得しています。許可しない場合も、数秒後にQR作成へ進みます。');
           const location = await captureLocation();
           if (location) {
             formData.set('latitude', String(location.latitude));
@@ -122,7 +128,7 @@
           }
         }
 
-        if (status) status.textContent = 'QRを作成しています。';
+        setStatus('QRを作成しています。');
         const response = await fetch(form.action, {
           method: 'POST',
           credentials: 'same-origin',
@@ -133,7 +139,7 @@
         if (!response.ok || !result.event_id) throw new Error(result.error || 'QRを作成できませんでした。');
         window.location.assign('/share-events/' + encodeURIComponent(result.event_id) + '/qr');
       } catch (error) {
-        if (status) status.textContent = error.message || 'QRを作成できませんでした。オンライン接続を確認して再度お試しください。';
+        setStatus(error.message || 'QRを作成できませんでした。オンライン接続を確認して再度お試しください。');
         if (submitButton) {
           submitButton.disabled = false;
           submitButton.textContent = originalButtonLabel;
