@@ -479,7 +479,7 @@ function render_dashboard(?PDO $db): void
         $profilePreviews .= '<div class="profile-preview" data-profile-preview="' . $profileId . '"' . ($index === 0 ? '' : ' hidden') . '>';
         $profilePreviews .= app_render_profile_avatar($avatarUrl, $displayName !== '' ? $displayName : $profileName, 'profile-preview-avatar');
         $profilePreviews .= '<div class="profile-preview-copy"><div class="profile-preview-heading"><p class="eyebrow">' . app_h($profileName) . '</p>';
-        $profilePreviews .= '<a class="icon-button profile-preview-edit" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '" aria-label="プロフィールを編集" title="プロフィールを編集"><i class="fa-solid fa-pen" aria-hidden="true"></i></a></div>';
+        $profilePreviews .= '<a class="icon-button profile-preview-edit" href="' . app_h(app_url('/profiles/' . $profileId . '/edit?' . http_build_query(['return_to' => '/dashboard']))) . '" aria-label="プロフィールを編集" title="プロフィールを編集"><i class="fa-solid fa-pen" aria-hidden="true"></i></a></div>';
         $profilePreviews .= '<h2>' . app_h($displayName !== '' ? $displayName : $profileName) . '</h2>';
         if ($headline !== '') {
             $profilePreviews .= '<p class="profile-preview-headline">' . app_h($headline) . '</p>';
@@ -785,7 +785,7 @@ function render_profiles(?PDO $db): void
         $avatarUrl = app_profile_display_avatar_url($profile, $user);
         $eventCount = app_count_profile_share_events($db, $profileId);
         $eventInfo = $eventCount > 0 ? $eventCount . ' 件の共有イベント' : '共有イベントはまだありません';
-        $cards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/share-events?profile_id=' . $profileId)) . '">共有イベントを見る</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
+        $cards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/share-events?profile_id=' . $profileId)) . '">共有イベントを見る</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit?' . http_build_query(['return_to' => '/profiles']))) . '">編集</a></div></div></article>';
     }
     $content = '<section class="page"><div class="section-head"><div><p class="eyebrow">Share profiles</p><h1>共有プロフィール</h1><p class="muted">相手や場面に合わせて、QRで見せるプロフィールを管理します。</p></div><a class="button primary" href="' . app_h(app_url('/profiles/new')) . '">＋ 追加</a></div><div class="grid">' . ($cards !== '' ? $cards : '<div class="empty">共有プロフィールはまだありません。</div>') . '</div><div class="section-actions"><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">QR作成へ戻る</a></div></section>';
     app_render('共有プロフィール', $content, ['user' => $user]);
@@ -904,6 +904,8 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         return;
     }
 
+    $returnTo = app_profile_form_return_to();
+
     if ($method === 'POST') {
         app_require_csrf();
         $profileName = trim((string) ($_POST['profile_name'] ?? ''));
@@ -923,7 +925,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
 
         if ($profileName === '' || $displayName === '') {
             app_flash('共有プロフィール名と表示名を入れてください。');
-            app_redirect($profileId === null ? '/profiles/new' : '/profiles/' . $profileId . '/edit');
+            app_redirect(($profileId === null ? '/profiles/new' : '/profiles/' . $profileId . '/edit') . '?' . http_build_query(['return_to' => $returnTo]));
         }
 
         if ($profile === null) {
@@ -965,7 +967,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
         ]);
         app_flash('共有プロフィールを更新しました。');
         app_save_profile_contacts($db, (int) $profile['id'], (array) ($_POST['contacts'] ?? []));
-        app_redirect('/profiles/' . (string) $profile['id'] . '/edit');
+        app_redirect('/profiles/' . (string) $profile['id'] . '/edit?' . http_build_query(['return_to' => $returnTo]));
     }
 
     $defaultDisplay = (string) ($user['account_display_name'] ?? $user['name'] ?? '');
@@ -982,6 +984,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     $contactValues = $profile ? app_profile_contact_values(app_fetch_profile_links($db, (int) $profile['id'])) : [];
     $guestSkin = app_guest_skin_id($profile['guest_skin_id'] ?? 'light');
     $guestSkinOptions = app_guest_skin_options();
+    $selectedSkin = $guestSkinOptions[$guestSkin] ?? ['name' => $guestSkin, 'description' => '', 'preview' => ''];
     ob_start();
     ?>
 <section class="page narrow profile-edit-page">
@@ -991,6 +994,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     <p>1アカウントで複数持てる共有プロフィールです。用途ごとに分けて使えます。</p>
     <form method="post" enctype="multipart/form-data" class="form profile-edit-form">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
+      <input type="hidden" name="return_to" value="<?= app_h($returnTo) ?>">
       <label>共有プロフィール名
         <input name="profile_name" required maxlength="120" value="<?= app_h($profileName) ?>" placeholder="仕事用 / 友人用 / 旅先用">
       </label>
@@ -1074,19 +1078,30 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
       <fieldset class="form-block guest-skin-picker">
         <legend>ゲストページのスキン</legend>
         <p class="hint">QR表示画面と、QRから開く共有プロフィール画面に反映されます。</p>
-        <div class="guest-skin-options">
+        <div class="guest-skin-current" data-skin-current>
+          <?php if ($selectedSkin['preview'] !== ''): ?><img src="<?= app_h($selectedSkin['preview']) ?>" alt="" data-skin-current-preview><?php else: ?><img alt="" data-skin-current-preview hidden><?php endif; ?>
+          <span class="guest-skin-option-copy"><strong data-skin-current-name><?= app_h($selectedSkin['name']) ?></strong><span data-skin-current-description><?= app_h($selectedSkin['description']) ?></span></span>
+          <button class="button secondary" type="button" data-skin-toggle aria-expanded="false" hidden>スキンを変更</button>
+        </div>
+        <div class="guest-skin-browser" data-skin-browser>
+          <label class="guest-skin-search">スキンを検索
+            <input type="search" data-skin-search placeholder="名前・説明・IDで絞り込む">
+          </label>
+          <p class="guest-skin-count" data-skin-count aria-live="polite"><?= count($guestSkinOptions) ?> 種類</p>
+          <div class="guest-skin-options" role="radiogroup" aria-label="ゲストページのスキン">
           <?php foreach ($guestSkinOptions as $skin): ?>
-            <label class="guest-skin-option<?= $guestSkin === $skin['id'] ? ' is-selected' : '' ?>">
+            <label class="guest-skin-option<?= $guestSkin === $skin['id'] ? ' is-selected' : '' ?>" data-skin-option data-search-text="<?= app_h(strtolower($skin['id'] . ' ' . $skin['name'] . ' ' . $skin['description'])) ?>" data-skin-name="<?= app_h($skin['name']) ?>" data-skin-description="<?= app_h($skin['description']) ?>" data-skin-preview-url="<?= app_h($skin['preview']) ?>">
               <input type="radio" name="guest_skin_id" value="<?= app_h($skin['id']) ?>"<?= $guestSkin === $skin['id'] ? ' checked' : '' ?>>
-              <?php if ($skin['preview'] !== ''): ?><img src="<?= app_h($skin['preview']) ?>" alt="" loading="lazy"><?php endif; ?>
+              <?php if ($skin['preview'] !== ''): ?><img src="<?= app_h($skin['preview']) ?>" alt="" loading="lazy" data-skin-preview="<?= app_h($skin['preview']) ?>"><?php else: ?><span class="guest-skin-no-preview" aria-hidden="true">Preview</span><?php endif; ?>
               <span class="guest-skin-option-copy"><strong><?= app_h($skin['name']) ?></strong><span><?= app_h($skin['description']) ?></span></span>
             </label>
           <?php endforeach; ?>
+          </div>
+          <p class="empty guest-skin-empty" data-skin-empty hidden>一致するスキンがありません。</p>
         </div>
       </fieldset>
       <div class="profile-form-actions">
-        <a class="button secondary" href="<?= app_h(app_url('/dashboard')) ?>">QR作成へ戻る</a>
-        <a class="button secondary" href="<?= app_h(app_url('/profiles')) ?>">一覧へ戻る</a>
+        <a class="button secondary" href="<?= app_h(app_url($returnTo)) ?>">戻る</a>
         <button class="button primary" type="submit"><?= app_h($button) ?></button>
       </div>
     </form>
@@ -1094,6 +1109,38 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
 </section>
     <?php
     app_render($title, (string) ob_get_clean(), ['user' => $user]);
+}
+
+function app_profile_form_return_to(): string
+{
+    $candidate = $_POST['return_to'] ?? $_GET['return_to'] ?? '';
+    if (!is_string($candidate) || $candidate === '') {
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $appHost = parse_url(app_url('/'), PHP_URL_HOST);
+        $refererHost = is_string($referer) ? parse_url($referer, PHP_URL_HOST) : null;
+        if (is_string($referer) && $referer !== '' && is_string($appHost) && $refererHost === $appHost) {
+            $candidate = (string) (parse_url($referer, PHP_URL_PATH) ?: '/profiles');
+            $query = parse_url($referer, PHP_URL_QUERY);
+            if (is_string($query) && $query !== '') {
+                $candidate .= '?' . $query;
+            }
+        }
+    }
+
+    if ($candidate !== '' && preg_match('/[\x00-\x1F\x7F]/', $candidate) !== 1 && !str_contains($candidate, '\\') && !str_starts_with($candidate, '//')) {
+        $parts = parse_url($candidate);
+        $path = is_array($parts) ? ($parts['path'] ?? '') : '';
+        $allowed = $path === '/dashboard'
+            || $path === '/profiles'
+            || $path === '/share-events'
+            || preg_match('#^/share-events/\d+/qr$#', $path) === 1
+            || preg_match('#^/s/[A-Za-z0-9_-]{12,80}$#', $path) === 1;
+        if ($allowed && !isset($parts['scheme']) && !isset($parts['host'])) {
+            return $path . (isset($parts['query']) ? '?' . $parts['query'] : '');
+        }
+    }
+
+    return '/profiles';
 }
 
 function app_fetch_contact_services(PDO $db): array
@@ -1491,7 +1538,7 @@ function render_share_event(?PDO $db, string $token, string $method): void
         $photos = app_fetch_share_event_photos($db, (int) $event['id']);
         $links = app_fetch_profile_links($db, (int) $event['profile_id']);
         $messages = app_fetch_share_event_messages($db, (int) $event['id']);
-        $editProfileUrl = app_url('/profiles/' . (int) $event['profile_id'] . '/edit');
+        $editProfileUrl = app_url('/profiles/' . (int) $event['profile_id'] . '/edit?' . http_build_query(['return_to' => '/s/' . $token]));
         app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $ownerName, $photos, $links, $messages, false, $editProfileUrl), ['chrome' => false, 'guest_skin' => $event['guest_skin_id'] ?? 'light']);
         return;
     }

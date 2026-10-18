@@ -297,9 +297,78 @@
     handleDashboard();
     handleQrPage();
     handleContactEditor();
+    handleGuestSkinPicker();
     handleGuestContactActions();
     handlePwaInstall();
   });
+
+  function handleGuestSkinPicker() {
+    const picker = document.querySelector('.guest-skin-picker');
+    if (!picker) return;
+
+    const browser = picker.querySelector('[data-skin-browser]');
+    const toggle = picker.querySelector('[data-skin-toggle]');
+    const search = picker.querySelector('[data-skin-search]');
+    const count = picker.querySelector('[data-skin-count]');
+    const empty = picker.querySelector('[data-skin-empty]');
+    const options = Array.from(picker.querySelectorAll('[data-skin-option]'));
+    const currentName = picker.querySelector('[data-skin-current-name]');
+    const currentDescription = picker.querySelector('[data-skin-current-description]');
+    const currentPreview = picker.querySelector('[data-skin-current-preview]');
+    if (!browser || !toggle || options.length === 0) return;
+
+    browser.hidden = true;
+    toggle.hidden = false;
+
+    function applyFilter() {
+      const query = (search?.value || '').trim().toLocaleLowerCase();
+      let visible = 0;
+      options.forEach((option) => {
+        const haystack = (option.dataset.searchText || '').toLocaleLowerCase();
+        const matches = query === '' || haystack.includes(query);
+        option.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      if (count) count.textContent = `${visible} / ${options.length} 種類`;
+      if (empty) empty.hidden = visible > 0;
+    }
+
+    function updateCurrent(option) {
+      if (currentName) currentName.textContent = option.dataset.skinName || '';
+      if (currentDescription) currentDescription.textContent = option.dataset.skinDescription || '';
+      if (currentPreview) {
+        const previewUrl = option.dataset.skinPreviewUrl || '';
+        currentPreview.hidden = previewUrl === '';
+        if (previewUrl !== '') currentPreview.src = previewUrl;
+        else currentPreview.removeAttribute('src');
+      }
+      options.forEach((item) => item.classList.toggle('is-selected', item === option));
+    }
+
+    toggle.addEventListener('click', () => {
+      const opening = browser.hidden;
+      browser.hidden = !opening;
+      toggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+      toggle.textContent = opening ? '閉じる' : 'スキンを変更';
+      if (opening) search?.focus();
+    });
+    search?.addEventListener('input', applyFilter);
+    picker.addEventListener('change', (event) => {
+      const input = event.target.closest('input[name="guest_skin_id"]');
+      if (!input?.checked) return;
+      const option = input.closest('[data-skin-option]');
+      if (!option) return;
+      updateCurrent(option);
+      browser.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.textContent = 'スキンを変更';
+      toggle.focus();
+    });
+
+    applyFilter();
+    const selected = options.find((option) => option.querySelector('input')?.checked);
+    if (selected) updateCurrent(selected);
+  }
 
   function handleBrandMenus() {
     const menus = Array.from(document.querySelectorAll('.brand-menu'));
