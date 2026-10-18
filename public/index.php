@@ -498,6 +498,7 @@ function render_dashboard(?PDO $db): void
   <div class="card launch-card">
     <form method="post" action="<?= $createAction ?>" enctype="multipart/form-data" class="form" id="share-launcher">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
+      <div class="launch-profiles">
       <fieldset class="profile-picker">
         <legend>今回表示するプロフィール</legend>
         <div class="profile-tabs" role="tablist" aria-label="共有プロフィール" aria-orientation="horizontal">
@@ -514,6 +515,9 @@ function render_dashboard(?PDO $db): void
       <div class="share-profile-panel" id="share-profile-panel" role="tabpanel"<?= $activeProfileTabId !== '' ? ' aria-labelledby="' . app_h($activeProfileTabId) . '"' : '' ?> tabindex="-1">
         <?= $profilePreviews ?>
         <p class="profile-selected-label" id="profile-selected-label" aria-live="polite"><?= $activeProfileName !== '' ? app_h($activeProfileName) . 'のプロフィールでQRを作成します。' : 'プロフィールを選ぶと、そのプロフィールでQRを作成します。' ?></p>
+      </div>
+      </div>
+      <div class="launch-settings">
         <label>今日のメッセージ <span class="optional">任意</span>
           <textarea name="body" id="share-body" rows="4" maxlength="2000" placeholder="今日はありがとうございました。"></textarea>
         </label>
@@ -545,6 +549,7 @@ function render_dashboard(?PDO $db): void
           <button class="button primary" type="submit" data-publish="1">QRを作成</button>
         </div>
         <div class="draft-banner" id="draft-status" role="status" aria-live="polite"><?= app_h($statusLine) ?></div>
+      </div>
       </div>
     </form>
   </div>
