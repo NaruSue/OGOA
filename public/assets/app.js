@@ -212,11 +212,11 @@
       const name = document.createElement('span');
       name.textContent = service.dataset.name || code;
       const remove = document.createElement('button');
-      remove.className = 'icon-button danger';
+      remove.className = 'button danger compact';
       remove.type = 'button';
       remove.dataset.contactRemove = '';
       remove.setAttribute('aria-label', '削除');
-      remove.textContent = '🗑';
+      remove.textContent = '削除';
       title.append(name, remove);
       const input = document.createElement('input');
       input.name = 'contacts[' + code + ']';

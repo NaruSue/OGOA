@@ -977,12 +977,12 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
     $contactValues = $profile ? app_profile_contact_values(app_fetch_profile_links($db, (int) $profile['id'])) : [];
     ob_start();
     ?>
-<section class="page narrow">
-  <div class="card">
+<section class="page narrow profile-edit-page">
+  <div class="card profile-edit-card">
     <p class="eyebrow">Share profile</p>
     <h1><?= app_h($title) ?></h1>
     <p>1アカウントで複数持てる共有プロフィールです。用途ごとに分けて使えます。</p>
-    <form method="post" enctype="multipart/form-data" class="form">
+    <form method="post" enctype="multipart/form-data" class="form profile-edit-form">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <label>共有プロフィール名
         <input name="profile_name" required maxlength="120" value="<?= app_h($profileName) ?>" placeholder="仕事用 / 友人用 / 旅先用">
@@ -1027,7 +1027,7 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
             <div class="contact-field" data-contact-field data-contact-code="<?= app_h($code) ?>">
               <div class="contact-field-title">
                 <span><?= app_h((string) ($service['display_name'] ?? $service['name'])) ?></span>
-                <button class="icon-button danger" type="button" data-contact-remove aria-label="削除">🗑</button>
+                <button class="button danger compact" type="button" data-contact-remove>削除</button>
               </div>
               <input name="contacts[<?= app_h($code) ?>]" value="<?= app_h($value) ?>" placeholder="<?= app_h((string) ($service['placeholder'] ?? '')) ?>">
             </div>
@@ -1064,7 +1064,10 @@ function render_profile_form(?PDO $db, string $method, ?int $profileId): void
       <label class="checkbox">
         <input type="checkbox" name="is_public" value="1"<?= $checked ?>> 利用する
       </label>
-      <button class="button primary" type="submit"><?= app_h($button) ?></button>
+      <div class="profile-form-actions">
+        <a class="button secondary" href="<?= app_h(app_url('/profiles')) ?>">一覧へ戻る</a>
+        <button class="button primary" type="submit"><?= app_h($button) ?></button>
+      </div>
     </form>
   </div>
 </section>
