@@ -131,6 +131,57 @@ function app_info_updated_at_label(): string
         ->format('Y/m/d H:i') . ' JST';
 }
 
+function app_guest_skin_options(): array
+{
+    static $options = null;
+    if ($options !== null) {
+        return $options;
+    }
+
+    $options = [];
+    $directory = app_root('public/skins/guest');
+    foreach (glob($directory . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR) ?: [] as $skinDirectory) {
+        $id = basename($skinDirectory);
+        if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $id) !== 1) {
+            continue;
+        }
+        $manifestPath = $skinDirectory . DIRECTORY_SEPARATOR . 'skin.json';
+        $cssPath = $skinDirectory . DIRECTORY_SEPARATOR . 'skin.css';
+        if (!is_file($manifestPath) || !is_file($cssPath)) {
+            continue;
+        }
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        if (!is_array($manifest) || ($manifest['id'] ?? '') !== $id || !is_string($manifest['name'] ?? null)) {
+            continue;
+        }
+        $options[$id] = [
+            'id' => $id,
+            'name' => $manifest['name'],
+            'description' => is_string($manifest['description'] ?? null) ? $manifest['description'] : '',
+            'preview' => is_file($skinDirectory . DIRECTORY_SEPARATOR . 'preview.svg') ? app_url('/skins/guest/' . $id . '/preview.svg') : '',
+        ];
+    }
+    uksort($options, static function (string $left, string $right): int {
+        $order = ['light' => 0, 'dark' => 1];
+        return ($order[$left] ?? 2) <=> ($order[$right] ?? 2) ?: strcmp($left, $right);
+    });
+
+    return $options;
+}
+
+function app_guest_skin_id(mixed $id): string
+{
+    $options = app_guest_skin_options();
+    if (is_string($id) && isset($options[$id])) {
+        return $id;
+    }
+    if (isset($options['light'])) {
+        return 'light';
+    }
+
+    return (string) (array_key_first($options) ?? 'light');
+}
+
 function app_enable_pwa_session(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -698,7 +749,7 @@ function app_count_profile_share_events(PDO $db, int $profileId): int
 function app_fetch_share_event_by_token(PDO $db, string $token): ?array
 {
     $stmt = $db->prepare(
-        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name, p.headline AS profile_headline, p.bio AS profile_bio, p.is_public, p.user_id, p.avatar_url AS profile_avatar_url,
+        'SELECT se.*, p.display_name AS profile_display_name, p.profile_name, p.headline AS profile_headline, p.bio AS profile_bio, p.is_public, p.guest_skin_id, p.user_id, p.avatar_url AS profile_avatar_url,
                 u.avatar_url AS account_avatar_url, u.account_display_name AS account_display_name, u.name AS account_name
          FROM share_events se
          INNER JOIN profiles p ON p.id = se.profile_id
@@ -1224,6 +1275,7 @@ function app_render(string $title, string $body, array $context = []): void
     $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
     $qrFooter = !empty($context['qr_footer']);
+    $guestSkin = isset($context['guest_skin']) ? app_guest_skin_id($context['guest_skin']) : '';
     $version = app_version();
     $cssVersion = $version;
     $jsVersion = $version;
@@ -1246,8 +1298,11 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">';
     echo '<meta name="theme-color" content="#0f5b66">';
     echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css?v=' . $cssVersion)) . '">';
+    if ($guestSkin !== '') {
+        echo '<link rel="stylesheet" href="' . app_h(app_url('/skins/guest/' . $guestSkin . '/skin.css?v=' . rawurlencode($cssVersion))) . '">';
+    }
     echo '<script defer src="' . app_h(app_url('/assets/app.js?v=' . $jsVersion)) . '"></script>';
-    echo '</head><body>';
+    echo '</head><body' . ($guestSkin !== '' ? ' class="guest-skin-theme guest-skin-theme-' . app_h($guestSkin) . '"' : '') . '>';
     echo '<div class="shell">';
     if ($chrome) {
         echo '<header class="topbar">';

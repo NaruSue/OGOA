@@ -1,0 +1,95 @@
+/* Skin contract: style only the QR presentation and guest profile screens. */
+body.guest-skin-theme-dark {
+  --bg: #101418;
+  --bg-2: #171d23;
+  --card: #1c242b;
+  --panel: #232d35;
+  --text: #f1f5f7;
+  --muted: #bdc7ce;
+  --line: rgba(231, 239, 244, 0.16);
+  --accent: #70d3df;
+  --accent-2: #ffb16e;
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
+body.guest-skin-theme-dark {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(30, 105, 119, 0.24), transparent 34%),
+    radial-gradient(circle at 95% 8%, rgba(120, 73, 42, 0.18), transparent 30%),
+    linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+body.guest-skin-theme-dark .guest-skin .card {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+body.guest-skin-theme-dark .guest-skin .message-box,
+body.guest-skin-theme-dark .guest-skin .guest-sent-message,
+body.guest-skin-theme-dark .guest-app-link {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+body.guest-skin-theme-dark .guest-skin .message-box p,
+body.guest-skin-theme-dark .guest-skin .guest-profile-copy,
+body.guest-skin-theme-dark .guest-skin .guest-sent-message p,
+body.guest-skin-theme-dark .guest-skin .qr-copy,
+body.guest-skin-theme-dark .guest-skin .qr-url {
+  color: var(--text);
+}
+
+body.guest-skin-theme-dark .guest-skin .contact-icon-button,
+body.guest-skin-theme-dark .guest-skin .button.secondary {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+body.guest-skin-theme-dark .guest-skin .button.primary,
+body.guest-skin-theme-dark .qr-home-link {
+  background: #12626b;
+  border-color: #12626b;
+  color: #fff;
+}
+
+body.guest-skin-theme-dark .guest-skin input,
+body.guest-skin-theme-dark .guest-skin textarea {
+  background: #151b20;
+  border-color: var(--line);
+  color: var(--text);
+}
+
+body.guest-skin-theme-dark .guest-skin input::placeholder,
+body.guest-skin-theme-dark .guest-skin textarea::placeholder {
+  color: #a8b5bd;
+}
+
+body.guest-skin-theme-dark .guest-skin .qr-frame {
+  background: #fff;
+  border-color: #fff;
+}
+
+body.guest-skin-theme-dark .guest-skin .qr-copy .muted {
+  color: var(--muted);
+}
+
+body.guest-skin-theme-dark .app-footer-qr {
+  border-color: var(--line);
+}
+
+body.guest-skin-theme-dark .app-footer-qr > span {
+  color: var(--muted);
+}
+
+body.guest-skin-theme-dark .guest-app-icon {
+  color: #fff;
+}
+
+body.guest-skin-theme-dark .guest-skin .guest-map-frame {
+  background: #fff;
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" role="img" aria-label="ライトテーマのプレビュー">
+  <rect width="320" height="150" rx="18" fill="#f2ece2"/>
+  <rect x="18" y="15" width="284" height="120" rx="14" fill="#fff" stroke="#ded8cf"/>
+  <rect x="34" y="30" width="82" height="72" rx="10" fill="#f5f6f4"/>
+  <circle cx="75" cy="66" r="19" fill="#0f5b66"/>
+  <rect x="132" y="38" width="132" height="10" rx="5" fill="#25211e"/>
+  <rect x="132" y="57" width="106" height="7" rx="3.5" fill="#8a8076"/>
+  <rect x="132" y="75" width="150" height="7" rx="3.5" fill="#c8c0b6"/>
+  <rect x="132" y="94" width="76" height="22" rx="8" fill="#e7f0f0"/>
+</svg>

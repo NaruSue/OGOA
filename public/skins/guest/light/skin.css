@@ -1,0 +1,18 @@
+/* Skin contract: style only the QR presentation and guest profile screens. */
+body.guest-skin-theme-light {
+  --bg: #f4efe7;
+  --bg-2: #eee6da;
+  --card: rgba(255, 255, 255, 0.88);
+  --panel: #fff;
+  --text: #1f1a17;
+  --muted: #6c6258;
+  --line: rgba(31, 26, 23, 0.13);
+  --accent: #0f5b66;
+  --accent-2: #d86b21;
+  --shadow: 0 22px 60px rgba(23, 19, 14, 0.11);
+}
+
+body.guest-skin-theme-light .guest-card,
+body.guest-skin-theme-light .qr-card {
+  color: var(--text);
+}

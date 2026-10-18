@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE profiles
+    ADD COLUMN IF NOT EXISTS guest_skin_id TEXT NOT NULL DEFAULT 'light';
+
+COMMIT;

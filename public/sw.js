@@ -117,6 +117,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/skins/guest/') && url.pathname.endsWith('/skin.css')) {
+    event.respondWith(
+      caches.open(SHELL_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) await cache.put(request, response.clone());
+        return response;
+      })
+    );
+    return;
+  }
+
   if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.webmanifest') {
     event.respondWith(
       caches.open(SHELL_CACHE)

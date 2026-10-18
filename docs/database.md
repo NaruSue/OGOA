@@ -40,7 +40,8 @@
 - `avatar_url`
 - `headline`
 - `bio`
-- `is_public`
+- `is_public`: 旧バージョンとの互換用に保持する内部カラム。現行UIや共有の可否判定には使わない
+- `guest_skin_id`: QR表示画面とゲスト公開プロフィール画面に適用するスキンID。初期値は `light`
 - `created_at`
 - `updated_at`
 
@@ -49,6 +50,7 @@
 - `profile_name` は管理用の名前です。例: `仕事用`, `旅先用`
 - `display_name` はゲスト画面に表示する名前です
 - `public_token` は公開URLに使う推測困難な文字列です
+- スキンIDは `public/skins/guest/<id>/skin.json` と `skin.css` が揃ったものから選びます。DB値が未知の場合はライトへフォールバックします
 
 ### sns_types
 
