@@ -296,12 +296,38 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    handleBrandMenus();
     handleDashboard();
     handleQrPage();
     handleContactEditor();
     handleGuestContactActions();
     handlePwaInstall();
   });
+
+  function handleBrandMenus() {
+    const menus = Array.from(document.querySelectorAll('.brand-menu'));
+    if (menus.length === 0) return;
+
+    menus.forEach((menu) => {
+      menu.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => { menu.open = false; });
+      });
+    });
+
+    document.addEventListener('click', (event) => {
+      menus.forEach((menu) => {
+        if (menu.open && !menu.contains(event.target)) menu.open = false;
+      });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const openMenu = menus.find((menu) => menu.open);
+      if (!openMenu) return;
+      openMenu.open = false;
+      openMenu.querySelector('summary')?.focus();
+    });
+  }
 
   let deferredInstallPrompt = null;
 
