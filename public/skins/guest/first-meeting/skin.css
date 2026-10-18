@@ -1,0 +1,29 @@
+body.guest-skin-theme-first-meeting {
+  --bg: #fff0f7; --bg-2: #f9dced; --card: #fffafd; --panel: #fff5fa;
+  --text: #492b50; --muted: #84677f; --line: rgba(184,99,171,.24);
+  --accent: #a948a0; --accent-2: #f0787a; --skin-radius: 26px;
+  --shadow: 0 18px 48px rgba(102,53,106,.12);
+  color-scheme: light; color: var(--text);
+  background: radial-gradient(circle at 12% 10%,rgba(245,127,156,.25) 0 5%,transparent 5.4%),radial-gradient(circle at 90% 17%,rgba(146,123,222,.25) 0 8%,transparent 8.4%),radial-gradient(circle at 80% 90%,rgba(255,211,113,.22) 0 7%,transparent 7.4%),linear-gradient(145deg,#fff7fb,#f7e9ff 60%,#fff0e9);
+}
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .qr-card,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .guest-card { color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: var(--skin-radius); box-shadow: var(--shadow); }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting h1,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting h2,
+body.guest-skin-theme-first-meeting .guest-welcome h1 { color: var(--text); }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .eyebrow { color: var(--accent); }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .message-box,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .guest-sent-message { color: var(--text); background: linear-gradient(120deg,#fff1f6,#f5efff); border: 1px solid var(--line); border-radius: 20px; }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .guest-profile-copy,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .guest-profile-copy p,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .qr-copy p { color: var(--text); }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .muted,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .guest-profile-copy .lead { color: var(--muted); }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .button.primary,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .contact-icon-button,
+body.guest-skin-theme-first-meeting .qr-home-link { color: #fff; background: linear-gradient(120deg,#a948a0,#e66d83); border-color: #a948a0; border-radius: 18px; }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .button.secondary { color: var(--accent); background: #fffafd; border-color: var(--line); border-radius: 18px; }
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .qr-frame,
+body.guest-skin-theme-first-meeting .guest-skin--first-meeting .guest-map-frame { background: #fff; border-color: var(--line); border-radius: 18px; }
+body.guest-skin-theme-first-meeting .guest-app-link { color: var(--accent); background: #fffafd; border-color: var(--line); }
+body.guest-skin-theme-first-meeting .app-footer-qr { border-color: var(--line); }

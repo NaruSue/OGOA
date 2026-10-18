@@ -1,0 +1,29 @@
+body.guest-skin-theme-activity-friends {
+  --bg: #f4efe3; --bg-2: #e6eee5; --card: #fffdf6; --panel: #faf6eb;
+  --text: #393a32; --muted: #777264; --line: rgba(85,139,126,.23);
+  --accent: #39877f; --accent-2: #d88758; --skin-radius: 30px;
+  --shadow: 0 16px 40px rgba(76,75,55,.11);
+  color-scheme: light; color: var(--text);
+  background: radial-gradient(circle at 14% 12%,rgba(236,184,109,.26) 0 6%,transparent 6.4%),radial-gradient(circle at 92% 36%,rgba(99,177,162,.23) 0 7%,transparent 7.4%),linear-gradient(145deg,#f7f0e2,#e8efe5 62%,#f4e6d7);
+}
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .qr-card,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .guest-card { color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 30px 20px 28px 22px; box-shadow: var(--shadow); }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends h1,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends h2,
+body.guest-skin-theme-activity-friends .guest-welcome h1 { color: var(--text); }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .eyebrow { color: var(--accent-2); }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .message-box,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .guest-sent-message { color: var(--text); background: #faf3e4; border: 1px solid var(--line); border-radius: 22px 14px 20px 16px; }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .guest-profile-copy,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .guest-profile-copy p,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .qr-copy p { color: var(--text); }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .muted,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .guest-profile-copy .lead { color: var(--muted); }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .button.primary,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .contact-icon-button,
+body.guest-skin-theme-activity-friends .qr-home-link { color: #fff; background: var(--accent); border-color: var(--accent); border-radius: 18px; }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .button.secondary { color: var(--accent); background: #fffdf6; border-color: var(--line); border-radius: 18px; }
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .qr-frame,
+body.guest-skin-theme-activity-friends .guest-skin--activity-friends .guest-map-frame { background: #fff; border-color: var(--line); border-radius: 18px; }
+body.guest-skin-theme-activity-friends .guest-app-link { color: var(--accent); background: #fffdf6; border-color: var(--line); }
+body.guest-skin-theme-activity-friends .app-footer-qr { border-color: var(--line); }

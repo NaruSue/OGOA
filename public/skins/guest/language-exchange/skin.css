@@ -1,0 +1,32 @@
+body.guest-skin-theme-language-exchange {
+  --bg: #edf8f5; --bg-2: #ddf1ec; --card: #fff; --panel: #f5fbf8;
+  --text: #174a4b; --muted: #5d7c79; --line: rgba(44,137,128,.2);
+  --accent: #147b78; --accent-2: #5ab4a5; --skin-radius: 28px;
+  --shadow: 0 18px 48px rgba(23,74,75,.10);
+  color-scheme: light; color: var(--text);
+  background: radial-gradient(ellipse at 12% 5%,rgba(110,202,183,.25),transparent 34%),linear-gradient(150deg,#f6fcf9,#e4f4ef 62%,#eef8fb);
+}
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .qr-card,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .guest-card {
+  color: var(--text); background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--skin-radius); box-shadow: var(--shadow);
+}
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange h1,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange h2,
+body.guest-skin-theme-language-exchange .guest-welcome h1 { color: var(--text); }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .eyebrow { color: var(--accent); }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .message-box,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .guest-sent-message { color: var(--text); background: #eff9f5; border: 1px solid var(--line); border-radius: 20px; }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .guest-profile-copy,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .guest-profile-copy p,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .qr-copy p { color: var(--text); }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .muted,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .guest-profile-copy .lead { color: var(--muted); }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .button.primary,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .contact-icon-button,
+body.guest-skin-theme-language-exchange .qr-home-link { color: #fff; background: var(--accent); border-color: var(--accent); border-radius: 18px; }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .button.secondary { color: var(--accent); background: #f5fbf8; border-color: var(--line); border-radius: 18px; }
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .qr-frame,
+body.guest-skin-theme-language-exchange .guest-skin--language-exchange .guest-map-frame { background: #fff; border-color: var(--line); border-radius: 18px; }
+body.guest-skin-theme-language-exchange .guest-app-link { color: var(--accent); background: #fff; border-color: var(--line); }
+body.guest-skin-theme-language-exchange .app-footer-qr { border-color: var(--line); }

@@ -1,0 +1,29 @@
+body.guest-skin-theme-travel-encounter {
+  --bg: #eaf6fb; --bg-2: #d4edf5; --card: #fff; --panel: #f4fbfd;
+  --text: #183f55; --muted: #607d8d; --line: rgba(47,139,166,.2);
+  --accent: #197c9b; --accent-2: #62b7ca; --skin-radius: 24px;
+  --shadow: 0 18px 48px rgba(24,63,85,.12);
+  color-scheme: light; color: var(--text);
+  background: radial-gradient(ellipse at 82% 2%,rgba(115,204,224,.32),transparent 35%),linear-gradient(165deg,#f5fbfd,#dceff6 56%,#d3e8ef);
+}
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .qr-card,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .guest-card { color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: var(--skin-radius); box-shadow: var(--shadow); }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter h1,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter h2,
+body.guest-skin-theme-travel-encounter .guest-welcome h1 { color: var(--text); }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .eyebrow { color: var(--accent); letter-spacing: .12em; }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .message-box,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .guest-sent-message { color: var(--text); background: #eff9fc; border: 1px solid var(--line); border-radius: 18px; }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .guest-profile-copy,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .guest-profile-copy p,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .qr-copy p { color: var(--text); }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .muted,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .guest-profile-copy .lead { color: var(--muted); }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .button.primary,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .contact-icon-button,
+body.guest-skin-theme-travel-encounter .qr-home-link { color: #fff; background: var(--accent); border-color: var(--accent); border-radius: 16px; }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .button.secondary { color: var(--accent); background: var(--panel); border-color: var(--line); border-radius: 16px; }
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .qr-frame,
+body.guest-skin-theme-travel-encounter .guest-skin--travel-encounter .guest-map-frame { background: #fff; border-color: var(--line); border-radius: 16px; }
+body.guest-skin-theme-travel-encounter .guest-app-link { color: var(--accent); background: #fff; border-color: var(--line); }
+body.guest-skin-theme-travel-encounter .app-footer-qr { border-color: var(--line); }

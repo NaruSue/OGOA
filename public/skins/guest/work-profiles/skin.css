@@ -1,0 +1,30 @@
+body.guest-skin-theme-work-profiles {
+  --bg: #eef1f8; --bg-2: #e5e9f2; --card: #fffdf8; --panel: #f8f6ef;
+  --text: #202943; --muted: #656b7a; --line: rgba(35,74,153,.22);
+  --accent: #244da0; --accent-2: #dc5a38; --skin-radius: 8px;
+  --shadow: 9px 10px 0 rgba(36,77,160,.12);
+  color-scheme: light; color: var(--text);
+  background: linear-gradient(90deg,#244da0 0 9px,transparent 9px),linear-gradient(0deg,transparent 95%,rgba(220,90,56,.16) 95%),linear-gradient(145deg,#f2f3f8,#ece9e1);
+}
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .qr-card,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-card { color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: var(--skin-radius); box-shadow: var(--shadow); }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-card { border-top: 5px solid var(--accent); }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles h1,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles h2,
+body.guest-skin-theme-work-profiles .guest-welcome h1 { color: var(--text); }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .eyebrow { color: var(--accent-2); letter-spacing: .13em; }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .message-box,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-sent-message { color: var(--text); background: #f8f6ef; border: 1px solid var(--line); border-left: 4px solid var(--accent-2); border-radius: 4px; }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-profile-copy,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-profile-copy p,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .qr-copy p { color: var(--text); }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .muted,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-profile-copy .lead { color: var(--muted); }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .button.primary,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .contact-icon-button,
+body.guest-skin-theme-work-profiles .qr-home-link { color: #fff; background: var(--accent); border-color: var(--accent); border-radius: 4px; }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .button.secondary { color: var(--accent); background: var(--panel); border-color: var(--line); border-radius: 4px; }
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .qr-frame,
+body.guest-skin-theme-work-profiles .guest-skin--work-profiles .guest-map-frame { background: #fff; border: 2px solid var(--accent); border-radius: 4px; }
+body.guest-skin-theme-work-profiles .guest-app-link { color: var(--accent); background: var(--card); border-color: var(--line); border-radius: 4px; }
+body.guest-skin-theme-work-profiles .app-footer-qr { border-color: var(--line); }

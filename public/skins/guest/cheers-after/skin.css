@@ -133,3 +133,20 @@ body.guest-skin-theme-cheers-after .app-footer-qr {
 body.guest-skin-theme-cheers-after .app-footer-qr > span {
   color: var(--muted);
 }
+
+/* Match the warm amber-lit bar scene shown in the six-scene sample. */
+body.guest-skin-theme-cheers-after {
+  --bg: #17120f; --bg-2: #2b1c15; --card: #2b211b; --panel: #38291f;
+  --text: #fff2df; --muted: #d2b99e; --line: rgba(222,157,79,.28);
+  --accent: #d99a4e; --accent-2: #bd6355;
+  background: radial-gradient(ellipse at 88% 8%,rgba(198,120,50,.28),transparent 34%),linear-gradient(145deg,#17120f,#261a13 58%,#100f0e);
+}
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-card {
+  background: linear-gradient(150deg,#34261d,#211914 78%);
+  border-color: var(--line);
+}
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card::before { content: "✦ 乾杯のあと ✦"; color: var(--accent); }
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .button.primary,
+body.guest-skin-theme-cheers-after .qr-home-link { background: linear-gradient(135deg,#edbf70,#d99a4e); }
+body.guest-skin-theme-cheers-after .guest-app-link { color: var(--text); background: #2b211b; border-color: var(--line); }
