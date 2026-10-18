@@ -29,7 +29,7 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .shell {
-  width: min(1120px, calc(100vw - 32px));
+  width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
   padding: 20px 0 48px;
 }
@@ -994,7 +994,7 @@ button.button { font: inherit; font-weight: 700; }
   .small-grid { grid-template-columns: 1fr; }
   .account-summary { grid-template-columns: 1fr; }
   .shell {
-    width: min(100vw - 16px, 1120px);
+    width: min(1120px, calc(100% - 16px));
     padding-top: 8px;
   }
   .topbar {
