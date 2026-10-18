@@ -683,6 +683,7 @@ button.button { font: inherit; font-weight: 700; }
 .guest-memory-title span { color: var(--muted); font-size: .88rem; }
 .guest-event-message { margin: 0; }
 .guest-event-message p { margin: 0; line-height: 1.7; }
+.guest-profile-card { width: min(560px, 100%); justify-self: center; gap: 14px; }
 .photo-grid.guest-photo-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
@@ -737,7 +738,12 @@ button.button { font: inherit; font-weight: 700; }
 .guest-photo-button:focus-visible .guest-photo-zoom { opacity: 1; }
 .guest-profile-heading { display: flex; align-items: center; gap: 16px; }
 .guest-profile-heading > div { display: grid; gap: 6px; }
-.guest-profile-card .hero-profile { grid-template-columns: 112px minmax(0, 1fr); gap: 20px; }
+.guest-profile-card .hero-profile {
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 16px;
+  width: min(100%, 420px);
+  margin-inline: auto;
+}
 .guest-photo-dialog {
   position: fixed;
   inset: 0;
