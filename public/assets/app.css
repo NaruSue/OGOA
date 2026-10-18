@@ -74,12 +74,14 @@ a:hover { text-decoration: underline; }
 .brand-menu > summary { cursor: pointer; list-style: none; }
 .brand-menu > summary::-webkit-details-marker { display: none; }
 .brand-menu-trigger { gap: 8px; }
+.brand-menu-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 16px; }
 .brand-menu-caret { color: var(--muted); font-size: 0.7rem; transition: transform 150ms ease; }
 .brand-menu[open] .brand-menu-caret { transform: rotate(180deg); }
 .brand-menu-panel { position: absolute; z-index: 20; top: calc(100% + 10px); left: 0; display: grid; min-width: 220px; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 16px 38px rgba(31, 26, 23, 0.16); }
-.brand-menu-panel a { padding: 11px 12px; border-radius: 10px; color: var(--text); }
+.brand-menu-panel ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.brand-menu-panel a { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; border-radius: 10px; color: var(--text); }
 .brand-menu-panel a:hover { background: rgba(15, 91, 102, 0.08); text-decoration: none; }
-.brand-menu-panel .app-version { padding: 8px 12px 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; }
+.brand-menu-panel .app-version { display: block; padding: 8px 12px 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; }
 .icon-nav { width: 46px; height: 46px; display: inline-grid; place-items: center; border-radius: 16px; background: linear-gradient(135deg, var(--accent), #123d77); color: #fff; box-shadow: 0 10px 18px rgba(15, 91, 102, 0.16); }
 .icon-nav:hover { text-decoration: none; transform: translateY(-1px); }
 .icon-nav i { font-size: 1.1rem; line-height: 1; color: #fff; }

@@ -738,11 +738,15 @@ function app_normalize_uploaded_files(array $files): array
     $normalized = [];
     $count = count($files['name']);
     for ($i = 0; $i < $count; $i++) {
+        $error = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+        if ($error === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
         $normalized[] = [
             'name' => $files['name'][$i] ?? null,
             'type' => $files['type'][$i] ?? null,
             'tmp_name' => $files['tmp_name'][$i] ?? null,
-            'error' => $files['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'error' => $error,
             'size' => $files['size'][$i] ?? null,
         ];
     }
@@ -1110,9 +1114,9 @@ function app_render(string $title, string $body, array $context = []): void
     $meta = $context['meta'] ?? '';
     $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
-    $cssVersion = (string) (filemtime(app_root('public/assets/app.css')) ?: time());
-    $jsVersion = (string) (filemtime(app_root('public/assets/app.js')) ?: time());
     $version = app_version();
+    $cssVersion = $version;
+    $jsVersion = $version;
 
     header('Content-Type: text/html; charset=UTF-8');
     header('Cache-Control: private, no-store, no-cache, must-revalidate');
@@ -1137,7 +1141,7 @@ function app_render(string $title, string $body, array $context = []): void
     if ($chrome) {
         echo '<header class="topbar">';
         if ($user) {
-            echo '<details class="brand-menu"><summary class="brand brand-menu-trigger" aria-label="1G1A メニュー" title="1G1A メニュー"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span><i class="fa-solid fa-chevron-down brand-menu-caret" aria-hidden="true"></i></summary><div class="brand-menu-panel"><a href="' . app_h(app_url('/news')) . '">新着情報</a><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a><a href="' . app_h(app_url('/logout')) . '">ログアウト</a><span class="app-version">v' . app_h($version) . '</span></div></details>';
+            echo '<details class="brand-menu"><summary class="brand brand-menu-trigger" aria-label="1G1A メニュー" title="1G1A メニュー"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span><i class="fa-solid fa-chevron-down brand-menu-caret" aria-hidden="true"></i></summary><nav class="brand-menu-panel" aria-label="アプリメニュー"><ul><li><a href="' . app_h(app_url('/news')) . '">新着情報</a></li><li><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a></li><li><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a></li><li><a href="' . app_h(app_url('/logout')) . '">ログアウト</a></li></ul><span class="app-version">v' . app_h($version) . '</span></nav></details>';
         } else {
             echo '<a class="brand" href="' . app_h(app_url('/')) . '"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span></a>';
         }
