@@ -744,6 +744,7 @@ button.button { font: inherit; font-weight: 700; }
   width: min(100%, 420px);
   margin-inline: auto;
 }
+.guest-profile-card .hero-avatar { width: 88px; max-width: 88px; height: 88px; }
 .guest-photo-dialog {
   position: fixed;
   inset: 0;
