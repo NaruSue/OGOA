@@ -96,6 +96,41 @@ function app_version(): string
     return $version;
 }
 
+function app_info_updated_at(): string
+{
+    static $updatedAt = null;
+    if ($updatedAt !== null) {
+        return $updatedAt;
+    }
+
+    $path = app_root('UPDATED_AT');
+    $value = is_file($path) ? trim((string) file_get_contents($path)) : '';
+    if ($value === '') {
+        $updatedAt = '';
+        return $updatedAt;
+    }
+
+    try {
+        $updatedAt = (new DateTimeImmutable($value))->format(DateTimeInterface::ATOM);
+    } catch (Throwable) {
+        $updatedAt = '';
+    }
+
+    return $updatedAt;
+}
+
+function app_info_updated_at_label(): string
+{
+    $updatedAt = app_info_updated_at();
+    if ($updatedAt === '') {
+        return '日時未設定';
+    }
+
+    return (new DateTimeImmutable($updatedAt))
+        ->setTimezone(new DateTimeZone('Asia/Tokyo'))
+        ->format('Y/m/d H:i') . ' JST';
+}
+
 function app_enable_pwa_session(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -1125,6 +1160,7 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<title>' . app_h($title) . ' | ' . app_h($siteName) . '</title>';
     echo '<meta name="description" content="1G1A の共有プロフィールサービス">';
     echo '<meta name="1g1a-app-version" content="' . app_h($version) . '">';
+    echo '<meta name="1g1a-info-updated-at" content="' . app_h(app_info_updated_at()) . '">';
     if (is_string($meta) && $meta !== '') {
         echo $meta;
     }
@@ -1162,6 +1198,7 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<div class="flash">' . app_h($flash) . '</div>';
     }
     echo $body;
+    echo '<footer class="app-footer"><span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
     echo '</div>';
     echo '</body></html>';
 }

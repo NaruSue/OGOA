@@ -18,7 +18,7 @@ if ($path === '/healthz') {
 if ($path === '/version.json' && $method === 'GET') {
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
-    app_json(['version' => app_version()]);
+    app_json(['version' => app_version(), 'updatedAt' => app_info_updated_at()]);
 }
 
 if ($path === '/pwa/session' && $method === 'POST') {
