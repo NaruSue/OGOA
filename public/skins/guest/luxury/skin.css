@@ -1,0 +1,93 @@
+/* Skin contract: style only the QR presentation and guest profile screens. */
+body.guest-skin-theme-luxury {
+  --bg: #15120f;
+  --bg-2: #211a13;
+  --card: #211b15;
+  --panel: #2c241b;
+  --text: #f6eddd;
+  --muted: #d1c1a8;
+  --line: rgba(212, 177, 105, 0.27);
+  --accent: #e1c27c;
+  --accent-2: #f1d99d;
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.38);
+  color-scheme: dark;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(162, 119, 50, 0.22), transparent 38%),
+    radial-gradient(ellipse at 90% 80%, rgba(116, 68, 37, 0.15), transparent 35%),
+    linear-gradient(155deg, var(--bg), var(--bg-2));
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .qr-card,
+body.guest-skin-theme-luxury .guest-skin--luxury .guest-card {
+  color: var(--text);
+  background: linear-gradient(145deg, #292219, #1c1712);
+  border: 1px solid #8d7140;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 3px rgba(212, 177, 105, 0.07), var(--shadow);
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury h1,
+body.guest-skin-theme-luxury .guest-skin--luxury h2,
+body.guest-skin-theme-luxury .guest-skin--luxury h3 {
+  color: #f8efd9;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
+  letter-spacing: 0.035em;
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .eyebrow {
+  color: #e1c27c;
+  letter-spacing: 0.2em;
+}
+
+body.guest-skin-theme-luxury .guest-welcome h1 { color: #f1d99d; }
+
+body.guest-skin-theme-luxury .guest-skin--luxury .message-box,
+body.guest-skin-theme-luxury .guest-skin--luxury .guest-sent-message {
+  background: #30261a;
+  border-color: #80663b;
+  color: var(--text);
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .contact-icon-button,
+body.guest-skin-theme-luxury .guest-skin--luxury .button.secondary,
+body.guest-skin-theme-luxury .guest-skin--luxury .guest-app-link {
+  background: #2c241b;
+  border-color: #80663b;
+  color: #f1d99d;
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .button.primary,
+body.guest-skin-theme-luxury .qr-home-link {
+  background: #d4b169;
+  border-color: #d4b169;
+  color: #21190d;
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .qr-frame {
+  background: #fff;
+  border: 5px solid #d4b169;
+  border-radius: 14px;
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .qr-copy,
+body.guest-skin-theme-luxury .guest-skin--luxury .qr-url,
+body.guest-skin-theme-luxury .guest-skin--luxury .guest-profile-copy,
+body.guest-skin-theme-luxury .guest-skin--luxury .guest-sent-message p {
+  color: var(--text);
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury input,
+body.guest-skin-theme-luxury .guest-skin--luxury textarea {
+  background: #17130f;
+  border-color: #80663b;
+  color: var(--text);
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury input::placeholder,
+body.guest-skin-theme-luxury .guest-skin--luxury textarea::placeholder {
+  color: #c5b394;
+}
+
+body.guest-skin-theme-luxury .guest-skin--luxury .guest-map-frame { background: #fff; }
+
+body.guest-skin-theme-luxury .app-footer-qr { border-color: var(--line); }
