@@ -667,19 +667,32 @@ function app_fetch_recent_events(PDO $db, int $profileId, int $limit = 5): array
     return $stmt->fetchAll() ?: [];
 }
 
-function app_fetch_share_event_history(PDO $db, int $userId): array
+function app_fetch_share_event_history(PDO $db, int $userId, ?int $profileId = null): array
 {
+    $profileFilter = $profileId === null ? '' : ' AND p.id = :profile_id';
     $stmt = $db->prepare(
         "SELECT se.*, p.profile_name, p.display_name AS profile_display_name
          FROM share_events se
          INNER JOIN profiles p ON p.id = se.profile_id
          WHERE p.user_id = :user_id
-           AND se.status = 'ready'
+           AND se.status = 'ready'" . $profileFilter . "
          ORDER BY se.created_at DESC, se.id DESC"
     );
-    $stmt->execute(['user_id' => $userId]);
+    $params = ['user_id' => $userId];
+    if ($profileId !== null) {
+        $params['profile_id'] = $profileId;
+    }
+    $stmt->execute($params);
 
     return $stmt->fetchAll() ?: [];
+}
+
+function app_count_profile_share_events(PDO $db, int $profileId): int
+{
+    $stmt = $db->prepare("SELECT COUNT(*) FROM share_events WHERE profile_id = :profile_id AND status = 'ready'");
+    $stmt->execute(['profile_id' => $profileId]);
+
+    return (int) $stmt->fetchColumn();
 }
 
 function app_fetch_share_event_by_token(PDO $db, string $token): ?array

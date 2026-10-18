@@ -48,7 +48,9 @@ The shared event page reached from the QR code should be organized into three bl
 
 ## Shared Event List Notes
 
-- The shared event list should be a separate screen linked from the app menu.
+- The shared event list should be a separate screen linked from both the app menu and each shared profile card.
+- Opening it from the app menu shows events for all profiles. Opening it from a profile card filters the list to that profile and identifies the selected profile near the heading.
+- The profile-specific list must be restricted to profiles owned by the signed-in account.
 - Show all eligible events without pagination.
 - Each row should use the shared profile name as its heading and show the event date and a short message snippet.
 - Keep expired events in the history until login cleanup removes them 30 days after expiry.

@@ -124,7 +124,10 @@ if ($path === '/dashboard') {
 }
 
 if ($path === '/share-events' && $method === 'GET') {
-    render_share_events($db);
+    $profileId = isset($_GET['profile_id']) && ctype_digit((string) $_GET['profile_id'])
+        ? (int) $_GET['profile_id']
+        : null;
+    render_share_events($db, $profileId);
     exit;
 }
 
@@ -550,7 +553,7 @@ function render_dashboard(?PDO $db): void
     app_render('Dashboard', (string) ob_get_clean(), ['user' => $user, 'flash' => false]);
 }
 
-function render_share_events(?PDO $db): void
+function render_share_events(?PDO $db, ?int $profileId = null): void
 {
     if ($db === null) {
         app_render('共有イベント', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
@@ -561,7 +564,21 @@ function render_share_events(?PDO $db): void
         app_redirect('/login');
     }
 
-    $events = app_fetch_share_event_history($db, (int) $user['id']);
+    $profile = null;
+    if ($profileId !== null) {
+        foreach (app_fetch_profiles($db, (int) $user['id']) as $ownedProfile) {
+            if ((int) $ownedProfile['id'] === $profileId) {
+                $profile = $ownedProfile;
+                break;
+            }
+        }
+        if ($profile === null) {
+            app_render('共有プロフィールが見つかりません', '<section class="page narrow"><div class="card"><h1>共有プロフィールが見つかりません</h1><a class="button secondary" href="' . app_h(app_url('/profiles')) . '">共有プロフィールへ戻る</a></div></section>', ['user' => $user]);
+            return;
+        }
+    }
+
+    $events = app_fetch_share_event_history($db, (int) $user['id'], $profileId);
     $rows = '';
     foreach ($events as $event) {
         $createdAt = strtotime((string) ($event['created_at'] ?? ''));
@@ -588,8 +605,13 @@ function render_share_events(?PDO $db): void
         }
     }
     $eventCount = count($events);
-    $emptyMessage = '共有イベントはまだありません。QRを作成すると、ここに履歴が表示されます。';
-    $content = '<section class="page"><div class="section-head"><div><p class="eyebrow">Share events</p><h1>共有イベント</h1></div><span class="muted">' . $eventCount . ' 件</span></div><div class="event-list">' . ($rows !== '' ? $rows : '<div class="empty">' . app_h($emptyMessage) . '</div>') . '</div><div class="section-actions"><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">QR作成へ戻る</a></div></section>';
+    $emptyMessage = $profile !== null
+        ? 'この共有プロフィールのイベントはまだありません。'
+        : '共有イベントはまだありません。QRを作成すると、ここに履歴が表示されます。';
+    $scopeLabel = $profile !== null ? '<p class="muted">プロフィール: ' . app_h((string) $profile['profile_name']) . '</p>' : '';
+    $backUrl = $profile !== null ? '/profiles' : '/dashboard';
+    $backLabel = $profile !== null ? '共有プロフィールへ戻る' : 'QR作成へ戻る';
+    $content = '<section class="page"><div class="section-head"><div><p class="eyebrow">Share events</p><h1>共有イベント</h1>' . $scopeLabel . '</div><span class="muted">' . $eventCount . ' 件</span></div><div class="event-list">' . ($rows !== '' ? $rows : '<div class="empty">' . app_h($emptyMessage) . '</div>') . '</div><div class="section-actions"><a class="button secondary" href="' . app_h(app_url($backUrl)) . '">' . app_h($backLabel) . '</a></div></section>';
     app_render('共有イベント', $content, ['user' => $user]);
 }
 
@@ -758,9 +780,9 @@ function render_profiles(?PDO $db): void
     foreach ($profiles as $profile) {
         $profileId = (int) $profile['id'];
         $avatarUrl = app_profile_display_avatar_url($profile, $user);
-        $events = app_fetch_recent_events($db, $profileId, 2);
-        $eventInfo = $events !== [] ? count($events) . ' 件の共有イベント' : 'まだ共有イベントはありません';
-        $cards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
+        $eventCount = app_count_profile_share_events($db, $profileId);
+        $eventInfo = $eventCount > 0 ? $eventCount . ' 件の共有イベント' : '共有イベントはまだありません';
+        $cards .= '<article class="list-card profile-list-card">' . app_render_profile_avatar($avatarUrl, (string) $profile['display_name'], 'avatar-mini') . '<div><p class="eyebrow">' . app_h((string) $profile['profile_name']) . '</p><h3>' . app_h((string) $profile['display_name']) . '</h3><p>' . app_h((string) ($profile['headline'] ?? '')) . '</p><p class="muted">' . app_h($eventInfo) . '</p></div><div class="list-meta"><span class="status-pill ' . (((bool) $profile['is_public']) ? 'public' : 'private') . '">' . (((bool) $profile['is_public']) ? '利用中' : '停止中') . '</span><span>' . (int) ($profile['sns_count'] ?? 0) . ' SNS</span><div class="list-actions"><a class="button secondary" href="' . app_h(app_url('/share-events?profile_id=' . $profileId)) . '">共有イベントを見る</a><a class="button secondary" href="' . app_h(app_url('/profiles/' . $profileId . '/edit')) . '">編集</a></div></div></article>';
     }
     $content = '<section class="page"><div class="section-head"><div><p class="eyebrow">Share profiles</p><h1>共有プロフィール</h1><p class="muted">相手や場面に合わせて、QRで見せるプロフィールを管理します。</p></div><a class="button primary" href="' . app_h(app_url('/profiles/new')) . '">＋ 追加</a></div><div class="grid">' . ($cards !== '' ? $cards : '<div class="empty">共有プロフィールはまだありません。</div>') . '</div><div class="section-actions"><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">QR作成へ戻る</a></div></section>';
     app_render('共有プロフィール', $content, ['user' => $user]);
