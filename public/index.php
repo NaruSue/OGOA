@@ -539,7 +539,7 @@ function render_dashboard(?PDO $db): void
         <div class="launch-actions">
           <button class="button primary" type="submit" data-publish="1">QRを作成</button>
         </div>
-        <div class="draft-banner" id="draft-status"><?= app_h($statusLine) ?></div>
+        <div class="draft-banner" id="draft-status" role="status" aria-live="polite"><?= app_h($statusLine) ?></div>
       </div>
     </form>
   </div>
@@ -583,7 +583,7 @@ function render_dashboard(?PDO $db): void
 <section class="page narrow dashboard-help">
   <details class="help-accordion">
     <summary>使い方</summary>
-    <p><?= app_h($profileHint) ?> 必要ならメッセージと写真を追加して、QRを作成します。プロフィールの追加・編集は右上の設定メニューから行えます。</p>
+    <p><?= app_h($profileHint) ?> 必要ならメッセージと写真を追加して、QRを作成します。プロフィールの追加・編集は左上の1G1Aメニューから行えます。</p>
   </details>
 </section>
     <?php

@@ -79,7 +79,7 @@
             capturedAt: new Date().toISOString(),
           }),
           () => resolve(null),
-          { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
+          { enableHighAccuracy: true, maximumAge: 60000, timeout: 3500 }
         );
       });
     }
@@ -125,13 +125,18 @@
         return;
       }
 
-      const submitButton = event.submitter;
-      if (submitButton) submitButton.disabled = true;
+      const submitButton = event.submitter || form.querySelector('button[type="submit"]');
+      const originalButtonLabel = submitButton?.textContent || '';
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'QRを作成しています…';
+      }
+      if (status) status.textContent = 'QRを作成しています。完了まで画面を閉じずにお待ちください。';
       try {
         const formData = new FormData(form);
         const shouldAttachLocation = Boolean(attachLocationInput && !attachLocationInput.disabled && attachLocationInput.checked);
         if (shouldAttachLocation) {
-          if (status) status.textContent = '位置情報を取得しています。';
+          if (status) status.textContent = '位置情報を取得しています。許可しない場合も、数秒後にQR作成へ進みます。';
           const location = await captureLocation();
           if (location) {
             formData.set('latitude', String(location.latitude));
@@ -150,10 +155,13 @@
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.event_id) throw new Error(result.error || 'QRを作成できませんでした。');
-        window.location.href = '/share-events/' + encodeURIComponent(result.event_id) + '/qr';
+        window.location.assign('/share-events/' + encodeURIComponent(result.event_id) + '/qr');
       } catch (error) {
         if (status) status.textContent = error.message || 'QRを作成できませんでした。オンライン接続を確認して再度お試しください。';
-        if (submitButton) submitButton.disabled = false;
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalButtonLabel;
+        }
       }
     });
   }
