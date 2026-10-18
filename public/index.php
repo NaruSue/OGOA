@@ -460,10 +460,35 @@ function render_dashboard(?PDO $db): void
         $profiles = app_fetch_profiles($db, (int) $user['id']);
     }
 
+    $preferredProfileId = null;
+    foreach (['profile_id' => $_GET['profile_id'] ?? null, 'cookie' => $_COOKIE['1g1a_last_profile_id'] ?? null] as $candidate) {
+        if ($preferredProfileId !== null || !is_scalar($candidate) || !ctype_digit((string) $candidate)) {
+            continue;
+        }
+        $candidateId = (int) $candidate;
+        foreach ($profiles as $profile) {
+            if ((int) $profile['id'] === $candidateId) {
+                $preferredProfileId = $candidateId;
+                break;
+            }
+        }
+    }
+    $selectedProfile = $profiles[0];
+    foreach ($profiles as $profile) {
+        if ((int) $profile['id'] === $preferredProfileId) {
+            $selectedProfile = $profile;
+            break;
+        }
+    }
+    $selectedProfileId = (int) $selectedProfile['id'];
+    $selectedSkinId = app_guest_skin_id($selectedProfile['guest_skin_id'] ?? 'light');
+
     $profileOptions = '';
     foreach ($profiles as $index => $profile) {
         $profileId = (int) $profile['id'];
-        $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' — ' . app_h((string) $profile['display_name']) . '</option>';
+        $skinId = app_guest_skin_id($profile['guest_skin_id'] ?? 'light');
+        $skinCssUrl = app_url('/skins/guest/' . $skinId . '/skin.css?v=' . rawurlencode(app_version()));
+        $profileOptions .= '<option value="' . $profileId . '" data-guest-skin="' . app_h($skinId) . '" data-guest-skin-css="' . app_h($skinCssUrl) . '"' . ($profileId === $selectedProfileId ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' — ' . app_h((string) $profile['display_name']) . '</option>';
     }
 
     $createAction = app_h(app_url('/share-events/create'));
@@ -476,7 +501,8 @@ function render_dashboard(?PDO $db): void
         $headline = trim((string) ($profile['headline'] ?? ''));
         $bio = trim((string) ($profile['bio'] ?? ''));
         $avatarUrl = app_profile_display_avatar_url($profile, $user);
-        $profilePreviews .= '<div class="profile-preview" data-profile-preview="' . $profileId . '"' . ($index === 0 ? '' : ' hidden') . '>';
+        $skinId = app_guest_skin_id($profile['guest_skin_id'] ?? 'light');
+        $profilePreviews .= '<div class="profile-preview guest-card" data-profile-preview="' . $profileId . '" data-profile-skin="' . app_h($skinId) . '"' . ($profileId === $selectedProfileId ? '' : ' hidden') . '>';
         $profilePreviews .= app_render_profile_avatar($avatarUrl, $displayName !== '' ? $displayName : $profileName, 'profile-preview-avatar');
         $profilePreviews .= '<div class="profile-preview-copy"><div class="profile-preview-heading"><p class="eyebrow">' . app_h($profileName) . '</p>';
         $profilePreviews .= '<a class="icon-button profile-preview-edit" href="' . app_h(app_url('/profiles/' . $profileId . '/edit?' . http_build_query(['return_to' => '/dashboard']))) . '" aria-label="プロフィールを編集" title="プロフィールを編集"><i class="fa-solid fa-pen" aria-hidden="true"></i></a></div>';
@@ -489,8 +515,8 @@ function render_dashboard(?PDO $db): void
 
     ob_start();
     ?>
-<section class="page launch-section">
-  <div class="card launch-card">
+<section class="page launch-section guest-skin guest-skin--<?= app_h($selectedSkinId) ?>">
+  <div class="card launch-card guest-card">
     <form method="post" action="<?= $createAction ?>" enctype="multipart/form-data" class="form" id="share-launcher">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <div class="launch-profiles">
@@ -553,7 +579,12 @@ function render_dashboard(?PDO $db): void
 </section>
 
     <?php
-    app_render('Dashboard', (string) ob_get_clean(), ['user' => $user, 'flash' => false]);
+    app_render('Dashboard', (string) ob_get_clean(), [
+        'user' => $user,
+        'flash' => false,
+        'guest_skin' => $selectedSkinId,
+        'dashboard_skin' => true,
+    ]);
 }
 
 function render_share_events(?PDO $db, ?int $profileId = null): void

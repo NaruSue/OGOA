@@ -1278,6 +1278,7 @@ function app_render(string $title, string $body, array $context = []): void
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
     $qrFooter = !empty($context['qr_footer']);
     $guestSkin = isset($context['guest_skin']) ? app_guest_skin_id($context['guest_skin']) : '';
+    $dashboardSkin = $guestSkin !== '' && !empty($context['dashboard_skin']);
     $version = app_version();
     $cssVersion = $version;
     $jsVersion = $version;
@@ -1301,10 +1302,18 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<meta name="theme-color" content="#0f5b66">';
     echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css?v=' . $cssVersion)) . '">';
     if ($guestSkin !== '') {
-        echo '<link rel="stylesheet" href="' . app_h(app_url('/skins/guest/' . $guestSkin . '/skin.css?v=' . rawurlencode($cssVersion))) . '">';
+        echo '<link' . ($dashboardSkin ? ' id="dashboard-skin-stylesheet"' : '') . ' rel="stylesheet" href="' . app_h(app_url('/skins/guest/' . $guestSkin . '/skin.css?v=' . rawurlencode($cssVersion))) . '">';
     }
     echo '<script defer src="' . app_h(app_url('/assets/app.js?v=' . $jsVersion)) . '"></script>';
-    echo '</head><body' . ($guestSkin !== '' ? ' class="guest-skin-theme guest-skin-theme-' . app_h($guestSkin) . '"' : '') . '>';
+    $bodyClasses = [];
+    if ($guestSkin !== '') {
+        $bodyClasses[] = 'guest-skin-theme';
+        $bodyClasses[] = 'guest-skin-theme-' . $guestSkin;
+    }
+    if ($dashboardSkin) {
+        $bodyClasses[] = 'guest-skin-dashboard';
+    }
+    echo '</head><body' . ($bodyClasses !== [] ? ' class="' . app_h(implode(' ', $bodyClasses)) . '"' : '') . '>';
     echo '<div class="shell">';
     if ($chrome) {
         echo '<header class="topbar">';

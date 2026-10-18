@@ -99,14 +99,44 @@
       });
     }
 
-    function activateProfile(profileId) {
+    function activateProfile(profileId, persist = false) {
       if (!profileId) return;
+      const selectedOption = Array.from(profileSelect?.options || []).find((option) => option.value === profileId);
+      if (!selectedOption) return;
+      const skinId = selectedOption.dataset.guestSkin || 'light';
       profilePreviews.forEach((preview) => {
         preview.hidden = preview.dataset.profilePreview !== profileId;
       });
+      document.body.classList.add('guest-skin-theme', 'guest-skin-dashboard', `guest-skin-theme-${skinId}`);
+      Array.from(document.body.classList).forEach((className) => {
+        if (className.startsWith('guest-skin-theme-') && className !== `guest-skin-theme-${skinId}`) {
+          document.body.classList.remove(className);
+        }
+      });
+      const skinWrapper = document.querySelector('.launch-section');
+      if (skinWrapper) {
+        Array.from(skinWrapper.classList).forEach((className) => {
+          if (className.startsWith('guest-skin--') && className !== `guest-skin--${skinId}`) {
+            skinWrapper.classList.remove(className);
+          }
+        });
+        skinWrapper.classList.add('guest-skin', `guest-skin--${skinId}`);
+      }
+      const stylesheet = document.getElementById('dashboard-skin-stylesheet');
+      const stylesheetUrl = selectedOption.dataset.guestSkinCss || '';
+      if (stylesheet && stylesheetUrl && stylesheet.getAttribute('href') !== stylesheetUrl) {
+        stylesheet.href = stylesheetUrl;
+      }
+      const themeColor = getComputedStyle(document.body).getPropertyValue('--bg').trim();
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColor && themeColorMeta) themeColorMeta.content = themeColor;
+      if (persist) {
+        const secure = location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `1g1a_last_profile_id=${encodeURIComponent(profileId)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+      }
     }
 
-    profileSelect?.addEventListener('change', () => activateProfile(profileSelect.value));
+    profileSelect?.addEventListener('change', () => activateProfile(profileSelect.value, true));
     activateProfile(profileSelect?.value || '');
 
     photoInput?.addEventListener('change', () => {

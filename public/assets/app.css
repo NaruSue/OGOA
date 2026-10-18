@@ -355,6 +355,79 @@ button.button { font: inherit; font-weight: 700; }
 .launch-section {
   margin-bottom: 18px;
 }
+body.guest-skin-dashboard {
+  color: var(--text);
+}
+body.guest-skin-dashboard .topbar {
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border-color: var(--line);
+}
+body.guest-skin-dashboard .brand,
+body.guest-skin-dashboard .brand-menu-caret,
+body.guest-skin-dashboard .user-chip {
+  color: var(--text);
+}
+body.guest-skin-dashboard .brand-mark,
+body.guest-skin-dashboard .icon-nav {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+body.guest-skin-dashboard .brand-menu-panel {
+  color: var(--text);
+  background: var(--panel);
+  border-color: var(--line);
+}
+body.guest-skin-dashboard .brand-menu-panel a:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+body.guest-skin-dashboard .launch-card {
+  color: var(--text);
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--card) 94%, var(--panel));
+}
+body.guest-skin-dashboard .profile-preview {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--panel);
+}
+body.guest-skin-dashboard .profile-preview-bio,
+body.guest-skin-dashboard .profile-picker-hint {
+  color: var(--muted);
+}
+body.guest-skin-dashboard .profile-preview-edit:hover {
+  color: var(--accent);
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+body.guest-skin-dashboard .form input,
+body.guest-skin-dashboard .form textarea,
+body.guest-skin-dashboard .form select {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--panel);
+}
+body.guest-skin-dashboard .form input::placeholder,
+body.guest-skin-dashboard .form textarea::placeholder {
+  color: var(--muted);
+}
+body.guest-skin-dashboard .launch-photo-upload,
+body.guest-skin-dashboard .location-option {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--panel);
+}
+body.guest-skin-dashboard .offline-guidance {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+}
+body.guest-skin-dashboard .offline-guidance > i {
+  color: var(--accent);
+}
+body.guest-skin-dashboard .launch-photo-button {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+}
 .launch-card { display: block; padding: clamp(20px, 3vw, 32px); }
 .launch-card > #share-launcher {
   display: grid;
