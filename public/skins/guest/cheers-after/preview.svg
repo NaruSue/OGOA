@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" role="img" aria-label="乾杯のあとのテーマプレビュー">
+  <defs>
+    <linearGradient id="scene" x2="1" y2="1"><stop stop-color="#063f45"/><stop offset=".58" stop-color="#082f35"/><stop offset="1" stop-color="#161d20"/></linearGradient>
+    <linearGradient id="amber"><stop stop-color="#edbf70"/><stop offset="1" stop-color="#d77870"/></linearGradient>
+  </defs>
+  <rect width="320" height="150" rx="18" fill="url(#scene)"/>
+  <circle cx="285" cy="18" r="70" fill="#a66b43" opacity=".14"/>
+  <rect x="14" y="14" width="86" height="122" rx="12" fill="#062d32" stroke="#edbf70" stroke-opacity=".55"/>
+  <text x="57" y="36" fill="#edbf70" font-size="7" font-family="Georgia,serif" text-anchor="middle" letter-spacing="1">乾杯のあと</text>
+  <rect x="31" y="48" width="52" height="52" rx="5" fill="#fff"/>
+  <path d="M36 53h15v15H36zm5 5v5h5v-5zm18-5h18v5H59zm0 9h7v5h-7zm10 0h7v10h-7zM36 73h5v5h-5zm9 0h5v5h-5zm-9 9h18v13H36zm5 4v5h8v-5zM58 82h18v5H58zm5 8h13v6H63z" fill="#142126"/>
+  <text x="57" y="118" fill="#fff0dc" font-size="6" font-family="sans-serif" text-anchor="middle">有効期間 24時間</text>
+  <rect x="112" y="14" width="194" height="122" rx="12" fill="#16484a" stroke="#edbf70" stroke-opacity=".4"/>
+  <text x="128" y="34" fill="#edbf70" font-size="7" font-family="sans-serif" letter-spacing="1">GUEST PAGE</text>
+  <text x="128" y="57" fill="#fff0dc" font-size="17" font-family="serif">今日はありがとう</text>
+  <rect x="128" y="66" width="138" height="4" rx="2" fill="#c8b7a1" opacity=".85"/>
+  <rect x="128" y="75" width="116" height="4" rx="2" fill="#c8b7a1" opacity=".56"/>
+  <rect x="128" y="88" width="162" height="28" rx="7" fill="#cc6d68" opacity=".24" stroke="#edbf70" stroke-opacity=".35"/>
+  <circle cx="141" cy="102" r="5" fill="#edbf70"/>
+  <rect x="152" y="98" width="54" height="7" rx="3.5" fill="url(#amber)"/>
+</svg>
