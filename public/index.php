@@ -500,7 +500,7 @@ function render_dashboard(?PDO $db): void
           <select name="profile_id" id="profile-select" required class="profile-select" aria-labelledby="profile-picker-legend" aria-describedby="profile-picker-hint">
             <?= $profileOptions ?>
           </select>
-          <p class="profile-picker-hint" id="profile-picker-hint">プロフィールを選ぶと、QRに表示する内容を確認できます。</p>
+          <p class="profile-picker-hint" id="profile-picker-hint">選んだ内容を下にプレビューします。</p>
         </fieldset>
         <div class="share-profile-panel" id="share-profile-panel" aria-live="polite">
           <?= $profilePreviews ?>
