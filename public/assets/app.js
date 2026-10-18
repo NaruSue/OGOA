@@ -304,15 +304,12 @@
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
-    document.querySelectorAll('[data-pwa-install]').forEach((button) => {
-      button.hidden = false;
-    });
   });
 
   function handlePwaInstall() {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     if ('serviceWorker' in navigator) {
       const appVersion = document.querySelector('meta[name="1g1a-app-version"]')?.content || '0.0.1';
-      const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
       const hadController = Boolean(navigator.serviceWorker.controller);
       let reloading = false;
 
@@ -359,16 +356,19 @@
       });
     }
 
-    document.querySelectorAll('[data-pwa-install]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        if (!deferredInstallPrompt) {
-          return;
-        }
-        deferredInstallPrompt.prompt();
-        await deferredInstallPrompt.userChoice.catch(() => undefined);
-        deferredInstallPrompt = null;
-        button.hidden = true;
-      });
+    const installLink = document.querySelector('[data-pwa-install]');
+    if (installLink && standalone) installLink.hidden = true;
+    window.addEventListener('appinstalled', () => {
+      if (installLink) installLink.hidden = true;
+    });
+    installLink?.addEventListener('click', async (event) => {
+      if (!deferredInstallPrompt) return;
+      event.preventDefault();
+      const installPrompt = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      installPrompt.prompt();
+      const choice = await installPrompt.userChoice.catch(() => null);
+      if (choice?.outcome === 'accepted' && installLink) installLink.hidden = true;
     });
   }
 })();

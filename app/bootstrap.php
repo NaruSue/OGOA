@@ -1227,7 +1227,6 @@ function app_render(string $title, string $body, array $context = []): void
     $flash = app_flash();
     $user = $context['user'] ?? null;
     $meta = $context['meta'] ?? '';
-    $footerContent = $context['footer'] ?? '';
     $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
     $version = app_version();
@@ -1258,7 +1257,7 @@ function app_render(string $title, string $body, array $context = []): void
     if ($chrome) {
         echo '<header class="topbar">';
         if ($user) {
-            echo '<details class="brand-menu"><summary class="brand brand-menu-trigger" aria-label="1G1A メニュー" title="1G1A メニュー"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span><i class="fa-solid fa-chevron-down brand-menu-caret" aria-hidden="true"></i></summary><nav class="brand-menu-panel" aria-label="アプリメニュー"><ul><li><a href="' . app_h(app_url('/news')) . '">新着情報</a></li><li><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a></li><li><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a></li><li><a href="' . app_h(app_url('/logout')) . '">ログアウト</a></li></ul><span class="app-version">v' . app_h($version) . '</span></nav></details>';
+            echo '<details class="brand-menu"><summary class="brand brand-menu-trigger" aria-label="1G1A メニュー" title="1G1A メニュー"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span><i class="fa-solid fa-chevron-down brand-menu-caret" aria-hidden="true"></i></summary><nav class="brand-menu-panel" aria-label="アプリメニュー"><ul><li><a href="' . app_h(app_url('/news')) . '">新着情報</a></li><li><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a></li><li><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a></li><li><a href="' . app_h(app_url('/pwa/install')) . '" data-pwa-install>ホーム画面に追加</a></li><li><a href="' . app_h(app_url('/logout')) . '">ログアウト</a></li></ul><span class="app-version">v' . app_h($version) . '</span></nav></details>';
         } else {
             echo '<a class="brand" href="' . app_h(app_url('/')) . '"><span class="brand-mark">1G1A</span><span class="brand-text">共有ページ</span></a>';
         }
@@ -1279,7 +1278,7 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<div class="flash">' . app_h($flash) . '</div>';
     }
     echo $body;
-    echo '<footer class="app-footer">' . (is_string($footerContent) ? $footerContent : '') . '<span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
+    echo '<footer class="app-footer"><span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
     echo '</div>';
     echo '</body></html>';
 }

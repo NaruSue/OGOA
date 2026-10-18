@@ -123,6 +123,11 @@ if ($path === '/dashboard') {
     exit;
 }
 
+if ($path === '/pwa/install' && $method === 'GET') {
+    render_pwa_install_guide($db);
+    exit;
+}
+
 if ($path === '/account') {
     render_account($db, $method);
     exit;
@@ -545,11 +550,6 @@ function render_dashboard(?PDO $db): void
   </div>
 </section>
 
-<section class="pwa-install-card">
-  <button class="button secondary" type="button" data-pwa-install hidden>ホーム画面に追加</button>
-  <p>スマホに追加すると、次回からすぐQRを表示できます。</p>
-</section>
-
 <section class="page">
   <div class="section-head">
     <div>
@@ -614,6 +614,38 @@ function render_news(?PDO $db): void
         : '';
     $body = '<section class="page narrow"><div class="section-head"><div><p class="eyebrow">News</p><h1>新着情報</h1><p class="muted">運営からのお知らせを掲載します。</p></div>' . $adminLink . '</div><div class="news-list">' . ($items !== '' ? $items : '<div class="empty">新着情報はありません。</div>') . '</div></section>';
     app_render('新着情報', $body, ['user' => $user]);
+}
+
+function render_pwa_install_guide(?PDO $db): void
+{
+    if ($db === null) {
+        app_render('ホーム画面に追加', '<section class="page narrow"><div class="card"><h1>DB に接続できません</h1></div></section>');
+        return;
+    }
+
+    $user = app_current_user($db);
+    if (!$user) {
+        app_redirect('/login');
+    }
+
+    $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $isIos = preg_match('/iPhone|iPad|iPod/i', $userAgent) === 1
+        || (preg_match('/Macintosh/i', $userAgent) === 1 && (string) ($_SERVER['HTTP_SEC_CH_UA_MOBILE'] ?? '') === '?1');
+    $isAndroid = !$isIos && preg_match('/Android/i', $userAgent) === 1;
+
+    if ($isIos) {
+        $instructions = '<p>Safariで1G1Aを開き、次の手順でホーム画面に追加してください。</p><ol><li>Safariの「共有」ボタンをタップ</li><li>「ホーム画面に追加」を選ぶ</li><li>右上の「追加」をタップ</li></ol><p class="muted">「ホーム画面に追加」が見当たらない場合は、共有メニューの「アクションを編集」から追加できます。アプリ内ブラウザで開いている場合は、Safariで1G1Aを開き直してください。</p>';
+        $deviceTitle = 'iPhone・iPad';
+    } elseif ($isAndroid) {
+        $instructions = '<p>メニューからの操作でインストール確認が開きます。表示されない場合は、ブラウザの「︙」メニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。</p><ol><li>インストール確認で「インストール」をタップ</li><li>ホーム画面に追加された1G1Aを開く</li></ol>';
+        $deviceTitle = 'Android';
+    } else {
+        $instructions = '<p>ChromeまたはEdgeのアドレスバーにあるインストールアイコン、またはブラウザメニューの「アプリをインストール」を選んでください。</p><ol><li>インストール確認で「インストール」を選ぶ</li><li>追加された1G1Aをアプリ一覧から開く</li></ol>';
+        $deviceTitle = 'この端末';
+    }
+
+    $content = '<section class="page narrow pwa-install-guide"><div class="card"><p class="eyebrow">PWA</p><h1>1G1Aをホーム画面に追加</h1><p>ホーム画面のアイコンから1G1Aをすぐに開けます。PWAではログイン状態を90日間保持し、期限内のQRはオフラインでも表示できます。</p><h2>' . app_h($deviceTitle) . 'での追加方法</h2>' . $instructions . '<a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">ダッシュボードへ戻る</a></div></section>';
+    app_render('ホーム画面に追加', $content, ['user' => $user]);
 }
 
 function render_news_manage(?PDO $db, string $method): void
@@ -1236,7 +1268,6 @@ function render_share_event_qr(?PDO $db, int $eventId): void
         [
             'user' => $user,
             'meta' => '<meta name="1g1a-qr-expires-at" content="' . $expiresAt . '"><meta name="1g1a-qr-title" content="' . app_h($displayName) . '">',
-            'footer' => '<a class="qr-home-link" href="' . app_h(app_url('/dashboard')) . '" aria-label="ダッシュボードへ戻る" title="ダッシュボードへ戻る"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg><span>ホームへ戻る</span></a>',
             'chrome' => false,
         ]
     );
