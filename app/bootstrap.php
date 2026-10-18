@@ -158,7 +158,9 @@ function app_guest_skin_options(): array
             'id' => $id,
             'name' => $manifest['name'],
             'description' => is_string($manifest['description'] ?? null) ? $manifest['description'] : '',
-            'preview' => is_file($skinDirectory . DIRECTORY_SEPARATOR . 'preview.svg') ? app_url('/skins/guest/' . $id . '/preview.svg') : '',
+            'preview' => is_file($skinDirectory . DIRECTORY_SEPARATOR . 'preview.svg')
+                ? app_url('/skins/guest/' . $id . '/preview.svg?v=' . rawurlencode(app_version()))
+                : '',
         ];
     }
     uksort($options, static function (string $left, string $right): int {
