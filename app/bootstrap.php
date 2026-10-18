@@ -1147,6 +1147,7 @@ function app_render(string $title, string $body, array $context = []): void
     $flash = app_flash();
     $user = $context['user'] ?? null;
     $meta = $context['meta'] ?? '';
+    $footerContent = $context['footer'] ?? '';
     $chrome = array_key_exists('chrome', $context) ? (bool) $context['chrome'] : true;
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
     $version = app_version();
@@ -1198,7 +1199,7 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<div class="flash">' . app_h($flash) . '</div>';
     }
     echo $body;
-    echo '<footer class="app-footer"><span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
+    echo '<footer class="app-footer">' . (is_string($footerContent) ? $footerContent : '') . '<span>1G1A v' . app_h($version) . '</span><span>情報更新: ' . app_h(app_info_updated_at_label()) . '</span></footer>';
     echo '</div>';
     echo '</body></html>';
 }

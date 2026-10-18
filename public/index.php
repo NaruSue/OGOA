@@ -1236,6 +1236,7 @@ function render_share_event_qr(?PDO $db, int $eventId): void
         [
             'user' => $user,
             'meta' => '<meta name="1g1a-qr-expires-at" content="' . $expiresAt . '"><meta name="1g1a-qr-title" content="' . app_h($displayName) . '">',
+            'footer' => '<a class="qr-home-link" href="' . app_h(app_url('/dashboard')) . '" aria-label="ダッシュボードへ戻る" title="ダッシュボードへ戻る"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg><span>ホームへ戻る</span></a>',
             'chrome' => false,
         ]
     );

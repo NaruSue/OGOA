@@ -112,6 +112,22 @@ a:hover { text-decoration: underline; }
   text-align: center;
 }
 
+.qr-home-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.qr-home-link:hover { color: #fff; text-decoration: none; filter: brightness(1.08); }
+.qr-home-link:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
+.qr-home-link svg { width: 18px; height: 18px; fill: currentColor; }
+
 .flash {
   margin-bottom: 16px;
   padding: 14px 16px;
