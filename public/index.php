@@ -1465,7 +1465,8 @@ function render_share_event(?PDO $db, string $token, string $method): void
         $photos = app_fetch_share_event_photos($db, (int) $event['id']);
         $links = app_fetch_profile_links($db, (int) $event['profile_id']);
         $messages = app_fetch_share_event_messages($db, (int) $event['id']);
-        app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $ownerName, $photos, $links, $messages, false), ['chrome' => false]);
+        $editProfileUrl = app_url('/profiles/' . (int) $event['profile_id'] . '/edit');
+        app_render(app_guest_display_name($event), render_guest_profile_screen_simple($event, $ownerName, $photos, $links, $messages, false, $editProfileUrl), ['chrome' => false]);
         return;
     }
 
@@ -1637,7 +1638,7 @@ function render_guest_message_box(string $token): string
     return (string) ob_get_clean();
 }
 
-function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = [], bool $showMessageBox = true): string
+function render_guest_profile_screen_simple(array $event, string $guestName, array $photos, array $links, array $messages = [], bool $showMessageBox = true, ?string $ownerEditUrl = null): string
 {
     $profileDisplayName = app_guest_display_name($event);
     $profileHeadline = trim((string) ($event['profile_headline'] ?? ''));
@@ -1726,6 +1727,11 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
         <div class="social-list">
           <?= $linkHtml ?>
         </div>
+      </div>
+    <?php endif; ?>
+    <?php if ($ownerEditUrl !== null): ?>
+      <div class="section-actions owner-profile-actions">
+        <a class="button secondary" href="<?= app_h($ownerEditUrl) ?>">この共有プロフィールを編集</a>
       </div>
     <?php endif; ?>
   </section>
