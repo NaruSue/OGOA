@@ -684,11 +684,12 @@ button.button { font: inherit; font-weight: 700; }
 .guest-event-message { margin: 0; }
 .guest-event-message p { margin: 0; line-height: 1.7; }
 .photo-grid.guest-photo-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: clamp(8px, 1.5vw, 14px);
   margin-top: 0;
 }
+.guest-photo-button:last-child:nth-child(3n + 1) { grid-column: 2; }
 .guest-photo-button {
   position: relative;
   display: block;
@@ -1235,6 +1236,15 @@ button.button { font: inherit; font-weight: 700; }
   .guest-profile-card .hero-profile { grid-template-columns: 76px minmax(0, 1fr); gap: 14px; }
   .guest-profile-card .hero-avatar { width: 76px; max-width: 76px; height: 76px; }
   .guest-photo-dialog { padding: 56px 10px max(12px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 640px) {
+  .photo-grid.guest-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .guest-photo-button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    width: calc((100% - 8px) / 2);
+    justify-self: center;
+  }
 }
 
 @media (max-width: 760px) {
