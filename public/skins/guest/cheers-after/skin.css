@@ -1,61 +1,79 @@
-/* Based on STYLE 01 from the 1G1A "乾杯のあと" scene sample. */
+/* “乾杯のあと” — an intimate night of shared photos and a warm afterglow.
+   Palette and typography follow docs.local/template/cheers-after/theme.css. */
 body.guest-skin-theme-cheers-after {
-  --bg: #101719;
-  --bg-2: #142629;
-  --card: #103b3e;
-  --panel: #17474a;
-  --text: #fff0dc;
-  --muted: #c8b7a1;
-  --line: rgba(237, 191, 112, 0.25);
-  --accent: #edbf70;
-  --accent-2: #d77870;
-  --shadow: 0 24px 66px rgba(0, 0, 0, 0.34);
+  --bg: #130d15;
+  --bg-2: #211522;
+  --card: #241925;
+  --panel: #2e202e;
+  --text: #fff3f1;
+  --muted: #c3aeb5;
+  --line: rgba(217, 167, 92, 0.34);
+  --accent: #d9a75c;
+  --accent-2: #e98a9a;
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
+  color: var(--text);
   background:
-    radial-gradient(ellipse at 86% 7%, rgba(104, 67, 44, 0.38), transparent 34%),
-    radial-gradient(ellipse at 12% 28%, rgba(11, 92, 91, 0.3), transparent 40%),
-    linear-gradient(155deg, #063f45, #082f35 56%, #161d20);
+    radial-gradient(ellipse at 12% 0%, rgba(120, 48, 77, 0.44), transparent 34%),
+    radial-gradient(ellipse at 100% 15%, rgba(78, 46, 99, 0.38), transparent 32%),
+    linear-gradient(155deg, #130d15, #211522 58%, #100d13);
+  font-family: "Inter", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+}
+
+body.guest-skin-theme-cheers-after .shell {
+  color: var(--text);
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-card {
   color: var(--text);
-  background: linear-gradient(150deg, #16484a, #102c30 78%);
+  background: linear-gradient(150deg, rgba(48, 32, 48, 0.98), rgba(30, 21, 32, 0.98));
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 24px;
   box-shadow: var(--shadow);
-}
-
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card::before {
-  content: "✦ 乾杯のあと ✦";
-  color: var(--accent);
-  font-family: Georgia, "Yu Mincho", serif;
-  font-size: 0.78rem;
-  letter-spacing: 0.2em;
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after h1,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after h2,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after h3 {
-  color: #fff0dc;
-  font-family: Georgia, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  color: #fff0e4;
+  font-family: Georgia, "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-weight: 500;
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card::before {
+  content: "✦ 乾杯のあと ✦";
+  display: block;
+  color: var(--accent);
+  font-family: Georgia, "Yu Mincho", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
 }
 
 body.guest-skin-theme-cheers-after .guest-welcome h1 {
-  color: #fff0dc;
-  text-shadow: 0 2px 24px rgba(237, 191, 112, 0.18);
+  color: #fff0e4;
+  text-shadow: 0 2px 24px rgba(217, 167, 92, 0.16);
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .eyebrow {
-  color: #edbf70;
-  letter-spacing: 0.18em;
+  color: var(--accent);
+  letter-spacing: 0.19em;
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-memory-heading .eyebrow::before,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-profile-heading .eyebrow::before {
+  content: "✦";
+  display: inline-block;
+  margin-right: 0.55em;
+  color: var(--accent-2);
+  font-size: 0.85em;
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .message-box,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-sent-message {
   color: var(--text);
-  background: linear-gradient(140deg, rgba(204, 109, 104, 0.16), rgba(237, 191, 112, 0.08));
-  border: 1px solid rgba(237, 191, 112, 0.22);
+  background: linear-gradient(140deg, rgba(109, 48, 76, 0.34), rgba(217, 167, 92, 0.08));
+  border: 1px solid rgba(217, 167, 92, 0.28);
   border-radius: 16px;
 }
 
@@ -66,63 +84,87 @@ body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-copy p {
   color: var(--text);
 }
 
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .contact-icon-button,
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .button.secondary {
-  color: #fff0dc;
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(237, 191, 112, 0.3);
-  border-radius: 12px;
-}
-
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .button.primary,
-body.guest-skin-theme-cheers-after .qr-home-link {
-  color: #2a2018;
-  background: linear-gradient(135deg, #edbf70, #d99a5c);
-  border-color: #edbf70;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-}
-
-body.guest-skin-theme-cheers-after .guest-app-link {
-  color: #fff0dc;
-  background: #123b3e;
-  border-color: rgba(237, 191, 112, 0.3);
-}
-
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-frame {
-  background: #fff;
-  border: 2px solid #edbf70;
-  border-radius: 18px;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
-}
-
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-copy .muted,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-profile-copy .lead,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-sent-message time,
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .muted {
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .muted,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-copy .muted {
   color: var(--muted);
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-profile-links,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-map-block,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-sent-list {
+  position: relative;
   border-color: var(--line);
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-profile-links::before,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-map-block::before,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-sent-list::before {
+  content: "✦";
+  position: absolute;
+  top: -0.65em;
+  left: 50%;
+  padding: 0 0.55em;
+  transform: translateX(-50%);
+  color: var(--accent);
+  background: #302030;
+  font-size: 0.72rem;
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .contact-icon-button,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .button.secondary {
+  color: #fff0e4;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(217, 167, 92, 0.38);
+  border-radius: 12px;
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .button.primary,
+body.guest-skin-theme-cheers-after .qr-home-link {
+  color: #fff8f2;
+  background: linear-gradient(135deg, #e98a9a, #a84870);
+  border-color: #f4b4b5;
+  border-radius: 12px;
+  box-shadow: 0 9px 25px rgba(0, 0, 0, 0.3);
+}
+
+body.guest-skin-theme-cheers-after .guest-app-link {
+  color: var(--text);
+  background: #241925;
+  border-color: var(--line);
+}
+
+body.guest-skin-theme-cheers-after .guest-app-icon {
+  background: linear-gradient(135deg, #6d304c, #3b2250);
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-frame {
+  background: #fff9f4;
+  border: 2px solid var(--accent);
+  border-radius: 20px;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.5);
+}
+
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-profile-card .avatar,
+body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-profile-card .avatar img {
+  border-color: var(--accent);
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after input,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after textarea {
   color: var(--text);
-  background: #102528;
-  border-color: rgba(237, 191, 112, 0.27);
+  background: #160f18;
+  border-color: rgba(217, 167, 92, 0.32);
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after input::placeholder,
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after textarea::placeholder {
-  color: #ad9d89;
+  color: #a98e9a;
 }
 
 body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-map-frame {
-  background: #fff;
+  background: #fff9f4;
   border-color: var(--line);
 }
 
@@ -133,20 +175,3 @@ body.guest-skin-theme-cheers-after .app-footer-qr {
 body.guest-skin-theme-cheers-after .app-footer-qr > span {
   color: var(--muted);
 }
-
-/* Match the warm amber-lit bar scene shown in the six-scene sample. */
-body.guest-skin-theme-cheers-after {
-  --bg: #17120f; --bg-2: #2b1c15; --card: #2b211b; --panel: #38291f;
-  --text: #fff2df; --muted: #d2b99e; --line: rgba(222,157,79,.28);
-  --accent: #d99a4e; --accent-2: #bd6355;
-  background: radial-gradient(ellipse at 88% 8%,rgba(198,120,50,.28),transparent 34%),linear-gradient(145deg,#17120f,#261a13 58%,#100f0e);
-}
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card,
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .guest-card {
-  background: linear-gradient(150deg,#34261d,#211914 78%);
-  border-color: var(--line);
-}
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .qr-card::before { content: "✦ 乾杯のあと ✦"; color: var(--accent); }
-body.guest-skin-theme-cheers-after .guest-skin--cheers-after .button.primary,
-body.guest-skin-theme-cheers-after .qr-home-link { background: linear-gradient(135deg,#edbf70,#d99a4e); }
-body.guest-skin-theme-cheers-after .guest-app-link { color: var(--text); background: #2b211b; border-color: var(--line); }

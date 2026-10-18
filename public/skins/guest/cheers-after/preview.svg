@@ -1,21 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" role="img" aria-label="乾杯のあと、琥珀色のバーをイメージしたプレビュー">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150" role="img" aria-label="乾杯のあと。プラムとワイン色にローズとゴールドを添えた夜のデザイン">
   <defs>
-    <linearGradient id="night" x2="1" y2="1"><stop stop-color="#17120f"/><stop offset=".58" stop-color="#382418"/><stop offset="1" stop-color="#100f0e"/></linearGradient>
-    <linearGradient id="amber"><stop stop-color="#edbf70"/><stop offset="1" stop-color="#bd6355"/></linearGradient>
+    <linearGradient id="night" x2="1" y2="1"><stop stop-color="#130d15"/><stop offset=".58" stop-color="#302030"/><stop offset="1" stop-color="#100d13"/></linearGradient>
+    <linearGradient id="rose"><stop stop-color="#e98a9a"/><stop offset="1" stop-color="#a84870"/></linearGradient>
   </defs>
   <rect width="320" height="150" rx="18" fill="url(#night)"/>
-  <circle cx="285" cy="18" r="70" fill="#d99a4e" opacity=".16"/>
-  <rect x="14" y="14" width="86" height="122" rx="12" fill="#241a13" stroke="#d99a4e" stroke-opacity=".6"/>
-  <text x="57" y="36" fill="#d99a4e" font-size="7" font-family="Georgia,serif" text-anchor="middle" letter-spacing="1">乾杯のあと</text>
-  <rect x="31" y="48" width="52" height="52" rx="5" fill="#fff"/>
-  <path d="M36 53h15v15H36zm5 5v5h5v-5zm18-5h18v5H59zm0 9h7v5h-7zm10 0h7v10h-7zM36 73h5v5h-5zm9 0h5v5h-5zm-9 9h18v13H36zm5 4v5h8v-5zM58 82h18v5H58zm5 8h13v6H63z" fill="#142126"/>
-  <text x="57" y="118" fill="#fff2df" font-size="6" font-family="sans-serif" text-anchor="middle">有効期間 24時間</text>
-  <rect x="112" y="14" width="194" height="122" rx="12" fill="#2b211b" stroke="#d99a4e" stroke-opacity=".5"/>
-  <text x="128" y="34" fill="#d99a4e" font-size="7" font-family="sans-serif" letter-spacing="1">GUEST PAGE</text>
-  <text x="128" y="57" fill="#fff2df" font-size="17" font-family="serif">今日はありがとう</text>
-  <rect x="128" y="66" width="138" height="4" rx="2" fill="#d2b99e" opacity=".85"/>
-  <rect x="128" y="75" width="116" height="4" rx="2" fill="#d2b99e" opacity=".56"/>
-  <rect x="128" y="88" width="162" height="28" rx="7" fill="#bd6355" opacity=".24" stroke="#d99a4e" stroke-opacity=".45"/>
-  <circle cx="141" cy="102" r="5" fill="#d99a4e"/>
-  <rect x="152" y="98" width="54" height="7" rx="3.5" fill="url(#amber)"/>
+  <circle cx="286" cy="20" r="72" fill="#d9a75c" opacity=".12"/>
+  <circle cx="20" cy="135" r="74" fill="#78304d" opacity=".25"/>
+  <rect x="14" y="14" width="86" height="122" rx="12" fill="#241925" stroke="#d9a75c" stroke-opacity=".65"/>
+  <text x="57" y="36" fill="#d9a75c" font-size="7" font-family="Georgia,serif" text-anchor="middle" letter-spacing="1">✦ 乾杯のあと ✦</text>
+  <rect x="31" y="48" width="52" height="52" rx="5" fill="#fff9f4"/>
+  <path d="M36 53h15v15H36zm5 5v5h5v-5zm18-5h18v5H59zm0 9h7v5h-7zm10 0h7v10h-7zM36 73h5v5h-5zm9 0h5v5h-5zm-9 9h18v13H36zm5 4v5h8v-5zM58 82h18v5H58zm5 8h13v6H63z" fill="#171119"/>
+  <text x="57" y="118" fill="#fff3f1" font-size="6" font-family="sans-serif" text-anchor="middle">今夜の思い出を、あとで。</text>
+  <rect x="112" y="14" width="194" height="122" rx="12" fill="#241925" stroke="#d9a75c" stroke-opacity=".48"/>
+  <text x="128" y="34" fill="#d9a75c" font-size="7" font-family="sans-serif" letter-spacing="1">TONIGHT'S MEMORY</text>
+  <text x="128" y="57" fill="#fff0e4" font-size="16" font-family="serif">乾杯できて、よかった。</text>
+  <path d="M128 67h160" stroke="#d9a75c" stroke-opacity=".55"/>
+  <rect x="128" y="76" width="138" height="4" rx="2" fill="#c3aeb5" opacity=".85"/>
+  <rect x="128" y="85" width="116" height="4" rx="2" fill="#c3aeb5" opacity=".56"/>
+  <rect x="128" y="99" width="162" height="25" rx="7" fill="#6d304c" opacity=".48" stroke="#d9a75c" stroke-opacity=".5"/>
+  <path d="M141 106l4 4-4 4-4-4z" fill="#e98a9a"/>
+  <rect x="152" y="107" width="54" height="7" rx="3.5" fill="url(#rose)"/>
 </svg>
