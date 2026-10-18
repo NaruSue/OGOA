@@ -463,16 +463,12 @@ function render_dashboard(?PDO $db): void
     $profileOptions = '';
     foreach ($profiles as $index => $profile) {
         $profileId = (int) $profile['id'];
-        $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' - ' . app_h((string) $profile['display_name']) . '</option>';
+        $profileOptions .= '<option value="' . $profileId . '"' . ($index === 0 ? ' selected' : '') . '>' . app_h((string) $profile['profile_name']) . ' — ' . app_h((string) $profile['display_name']) . '</option>';
     }
 
     $statusLine = 'オンライン中に共有イベントを作成します。表示済みで期限内のQRは、オフラインでも開けます。';
     $createAction = app_h(app_url('/share-events/create'));
     $csrf = app_h(app_csrf_token());
-    $activeProfile = $profiles[0] ?? null;
-    $activeProfileId = $activeProfile !== null ? (int) $activeProfile['id'] : 0;
-    $activeProfileTabId = $activeProfileId > 0 ? 'profile-tab-' . $activeProfileId : '';
-    $activeProfileName = $activeProfile !== null ? (string) $activeProfile['profile_name'] : '';
     $profilePreviews = '';
     foreach ($profiles as $index => $profile) {
         $profileId = (int) $profile['id'];
@@ -483,7 +479,7 @@ function render_dashboard(?PDO $db): void
         $avatarUrl = app_profile_display_avatar_url($profile, $user);
         $profilePreviews .= '<div class="profile-preview" data-profile-preview="' . $profileId . '"' . ($index === 0 ? '' : ' hidden') . '>';
         $profilePreviews .= app_render_profile_avatar($avatarUrl, $displayName !== '' ? $displayName : $profileName, 'profile-preview-avatar');
-        $profilePreviews .= '<div class="profile-preview-copy"><p class="eyebrow">QRに表示するプロフィール</p>';
+        $profilePreviews .= '<div class="profile-preview-copy"><p class="eyebrow">' . app_h($profileName) . '</p>';
         $profilePreviews .= '<h2>' . app_h($displayName !== '' ? $displayName : $profileName) . '</h2>';
         if ($headline !== '') {
             $profilePreviews .= '<p class="profile-preview-headline">' . app_h($headline) . '</p>';
@@ -499,23 +495,16 @@ function render_dashboard(?PDO $db): void
     <form method="post" action="<?= $createAction ?>" enctype="multipart/form-data" class="form" id="share-launcher">
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <div class="launch-profiles">
-      <fieldset class="profile-picker">
-        <legend>今回表示するプロフィール</legend>
-        <div class="profile-tabs" role="tablist" aria-label="共有プロフィール" aria-orientation="horizontal">
-          <?php foreach ($profiles as $index => $profile): ?>
-            <?php $profileTabId = 'profile-tab-' . (int) $profile['id']; ?>
-            <button class="profile-tab<?= $index === 0 ? ' is-active' : '' ?>" id="<?= app_h($profileTabId) ?>" type="button" role="tab" aria-selected="<?= $index === 0 ? 'true' : 'false' ?>" aria-controls="share-profile-panel" tabindex="<?= $index === 0 ? '0' : '-1' ?>" data-profile-tab="<?= (int) $profile['id'] ?>" data-profile-name="<?= app_h((string) $profile['profile_name']) ?>"><?= app_h((string) $profile['profile_name']) ?></button>
-          <?php endforeach; ?>
+        <fieldset class="profile-picker">
+          <legend id="profile-picker-legend">QRに表示するプロフィール</legend>
+          <select name="profile_id" id="profile-select" required class="profile-select" aria-labelledby="profile-picker-legend" aria-describedby="profile-picker-hint">
+            <?= $profileOptions ?>
+          </select>
+          <p class="profile-picker-hint" id="profile-picker-hint">プロフィールを選ぶと、QRに表示する内容を確認できます。</p>
+        </fieldset>
+        <div class="share-profile-panel" id="share-profile-panel" aria-live="polite">
+          <?= $profilePreviews ?>
         </div>
-        <select name="profile_id" id="profile-select" required class="profile-select-native" aria-hidden="true" tabindex="-1">
-          <?= $profileOptions ?>
-        </select>
-        <p class="profile-picker-hint">タブを切り替えると、画像や紹介文を確認できます。</p>
-      </fieldset>
-      <div class="share-profile-panel" id="share-profile-panel" role="tabpanel"<?= $activeProfileTabId !== '' ? ' aria-labelledby="' . app_h($activeProfileTabId) . '"' : '' ?> tabindex="-1">
-        <?= $profilePreviews ?>
-        <p class="profile-selected-label" id="profile-selected-label" aria-live="polite"><?= $activeProfileName !== '' ? app_h($activeProfileName) . 'のプロフィールでQRを作成します。' : 'プロフィールを選ぶと、そのプロフィールでQRを作成します。' ?></p>
-      </div>
       </div>
       <div class="launch-settings">
         <label>今日のメッセージ <span class="optional">任意</span>
@@ -631,7 +620,7 @@ function render_help(?PDO $db): void
     if (!$user) {
         app_redirect('/login');
     }
-    $content = '<section class="page narrow"><div class="card help-page"><p class="eyebrow">How to use</p><h1>使い方</h1><ol class="help-steps"><li><strong>プロフィールを選ぶ</strong><span>ダッシュボード上部のタブを切り替え、画像・表示名・紹介文を確認します。編集は1G1Aメニューの「共有プロフィール」から行えます。</span></li><li><strong>今回のメッセージや写真を追加する</strong><span>必要な場合だけ入力します。何も追加せずにQRを作成することもできます。</span></li><li><strong>QRを作成して見せる</strong><span>オンラインでQRを作成し、相手に読み取ってもらいます。位置情報は設定が許可されている場合だけ取得します。</span></li><li><strong>作成済みQRを開く</strong><span>メニューの「共有イベント」から履歴を開き、期限内のイベントをタップするとQRを再表示できます。</span></li></ol><h2>ホーム画面に追加</h2><p>1G1Aメニューの「ホーム画面に追加」から端末に合わせた手順を確認できます。インストールしたPWAではログイン状態を90日間保持し、期限内にキャッシュ済みのQRをオフラインでも表示できます。</p><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">ダッシュボードへ戻る</a></div></section>';
+    $content = '<section class="page narrow"><div class="card help-page"><p class="eyebrow">How to use</p><h1>使い方</h1><ol class="help-steps"><li><strong>プロフィールを選ぶ</strong><span>ダッシュボードのプロフィール選択欄から選び、画像・表示名・紹介文を確認します。編集は1G1Aメニューの「共有プロフィール」から行えます。</span></li><li><strong>今回のメッセージや写真を追加する</strong><span>必要な場合だけ入力します。何も追加せずにQRを作成することもできます。</span></li><li><strong>QRを作成して見せる</strong><span>オンラインでQRを作成し、相手に読み取ってもらいます。位置情報は設定が許可されている場合だけ取得します。</span></li><li><strong>作成済みQRを開く</strong><span>メニューの「共有イベント」から履歴を開き、期限内のイベントをタップするとQRを再表示できます。</span></li></ol><h2>ホーム画面に追加</h2><p>1G1Aメニューの「ホーム画面に追加」から端末に合わせた手順を確認できます。インストールしたPWAではログイン状態を90日間保持し、期限内にキャッシュ済みのQRをオフラインでも表示できます。</p><a class="button secondary" href="' . app_h(app_url('/dashboard')) . '">ダッシュボードへ戻る</a></div></section>';
     app_render('使い方', $content, ['user' => $user]);
 }
 
