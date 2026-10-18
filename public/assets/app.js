@@ -1,210 +1,50 @@
 (function () {
-  const DB_NAME = '1g1a-offline';
-  const DB_VERSION = 1;
-  const RESERVED_STORE = 'reservedTokens';
-  const PENDING_STORE = 'pendingShareEvents';
-
-  function openDb() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(RESERVED_STORE)) {
-          db.createObjectStore(RESERVED_STORE, { keyPath: 'public_token' });
-        }
-        if (!db.objectStoreNames.contains(PENDING_STORE)) {
-          db.createObjectStore(PENDING_STORE, { keyPath: 'public_token' });
-        }
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async function withStore(name, mode, callback) {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(name, mode);
-      const store = tx.objectStore(name);
-      const result = callback(store);
-      tx.oncomplete = () => resolve(result);
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-
-  function randomToken(prefix = 'draft-') {
-    if (window.crypto && crypto.randomUUID) {
-      return prefix + crypto.randomUUID().replace(/-/g, '');
-    }
-    return prefix + Math.random().toString(16).slice(2) + Date.now().toString(16);
-  }
-
-  async function reserveTokens(profileId, csrf) {
-    if (!profileId || !navigator.onLine) {
-      return;
-    }
-
+  async function cacheVisibleQrPages() {
+    if (!navigator.onLine || !('serviceWorker' in navigator)) return;
     try {
-      const res = await fetch('/share-tokens/reserve', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'fetch',
-        },
-        body: new URLSearchParams({
-          _csrf: csrf,
-          profile_id: String(profileId),
-          count: '3',
-        }),
-      });
-
-      if (!res.ok) {
-        return;
-      }
-
-      const data = await res.json();
-      const tokens = Array.isArray(data.reserved_tokens) ? data.reserved_tokens : [];
-      for (const token of tokens) {
-        await withStore(RESERVED_STORE, 'readwrite', (store) => {
-          store.put({
-            public_token: token,
-            profile_id: Number(profileId),
-            reserved_at: Date.now(),
-          });
-        });
-      }
+      await navigator.serviceWorker.ready;
+      const links = Array.from(document.querySelectorAll('.event-list a.event-row'));
+      await Promise.all(links.map(async (link) => {
+        try {
+          const response = await fetch(link.href, { credentials: 'same-origin' });
+          if (!response.ok) return;
+          const html = await response.text();
+          const parsed = new DOMParser().parseFromString(html, 'text/html');
+          const images = Array.from(parsed.images, (image) => image.src);
+          await Promise.all(images.map((src) => {
+            const crossOrigin = new URL(src).origin !== location.origin;
+            return fetch(src, crossOrigin ? { mode: 'no-cors' } : { credentials: 'same-origin' }).catch(() => undefined);
+          }));
+        } catch (_) {
+          // QR cache refresh is best-effort; the online page remains usable.
+        }
+      }));
     } catch (err) {
-      console.warn('reserve failed', err);
-    }
-  }
-
-  async function pickToken(profileId) {
-    const db = await openDb();
-    const tokens = await new Promise((resolve, reject) => {
-      const tx = db.transaction(RESERVED_STORE, 'readonly');
-      const store = tx.objectStore(RESERVED_STORE);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-
-    const match = (tokens || []).find((item) => Number(item.profile_id) === Number(profileId));
-    if (!match) {
-      return randomToken();
-    }
-
-    await withStore(RESERVED_STORE, 'readwrite', (store) => store.delete(match.public_token));
-    return match.public_token;
-  }
-
-  async function storeDraft(draft) {
-    await withStore(PENDING_STORE, 'readwrite', (store) => store.put(draft));
-  }
-
-  async function deleteDraft(token) {
-    await withStore(PENDING_STORE, 'readwrite', (store) => store.delete(token));
-  }
-
-  async function loadDrafts() {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(PENDING_STORE, 'readonly');
-      const store = tx.objectStore(PENDING_STORE);
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async function syncDraft(draft) {
-    const form = new FormData();
-    form.append('_csrf', draft.csrf || '');
-    form.append('profile_id', String(draft.profile_id));
-    form.append('body', draft.body || '');
-    form.append('expires_in', draft.expires_in || '24h');
-    form.append('public_token', draft.public_token);
-    form.append('status', 'ready');
-    form.append('attach_location', draft.attach_location === false ? '0' : '1');
-    if (draft.reserve_token) {
-      form.append('reserve_token', draft.reserve_token);
-    }
-    if (draft.latitude !== null && draft.latitude !== undefined) {
-      form.append('latitude', String(draft.latitude));
-    }
-    if (draft.longitude !== null && draft.longitude !== undefined) {
-      form.append('longitude', String(draft.longitude));
-    }
-    if (draft.accuracy !== null && draft.accuracy !== undefined) {
-      form.append('location_accuracy_m', String(draft.accuracy));
-    }
-    if (draft.location_captured_at) {
-      form.append('location_captured_at', draft.location_captured_at);
-    }
-    for (const photo of draft.photos || []) {
-      form.append('photos[]', photo.blob, photo.name || 'photo.jpg');
-    }
-
-    const res = await fetch('/share-events/create', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'fetch',
-      },
-      body: form,
-    });
-
-    if (!res.ok) {
-      throw new Error('sync failed');
-    }
-
-    const data = await res.json();
-    await deleteDraft(draft.public_token);
-    return data;
-  }
-
-  async function syncPending() {
-    const drafts = await loadDrafts();
-    for (const draft of drafts) {
-      if (!draft.publish) {
-        continue;
-      }
-      if (draft.synced_at) {
-        continue;
-      }
-      try {
-        await syncDraft(draft);
-      } catch (err) {
-        console.warn('sync pending draft failed', err);
-      }
+      console.warn('QR cache refresh failed', err);
     }
   }
 
   async function handleDashboard() {
+    cacheVisibleQrPages();
     const form = document.getElementById('share-launcher');
     if (!form) {
       return;
     }
 
     const profileSelect = document.getElementById('profile-select');
-    const bodyInput = document.getElementById('share-body');
-    const photosInput = document.getElementById('share-photos');
-    const expiresInput = document.getElementById('share-expires');
+    const status = document.getElementById('draft-status');
     const attachLocationInput = document.getElementById('attach-location');
     const locationEnabledHint = document.getElementById('location-enabled-hint');
     const locationDisabledHint = document.getElementById('location-disabled-hint');
-    const status = document.getElementById('draft-status');
-    const csrf = form.querySelector('input[name="_csrf"]')?.value || '';
-    function setLocationAvailability(granted) {
+
+    function setLocationAvailability(available) {
       if (!attachLocationInput) return;
       const wasDisabled = attachLocationInput.disabled;
-      attachLocationInput.disabled = !granted;
-      if (!granted) {
-        attachLocationInput.checked = false;
-      } else if (wasDisabled) {
-        attachLocationInput.checked = true;
-      }
-      if (locationEnabledHint) locationEnabledHint.hidden = !granted;
-      if (locationDisabledHint) locationDisabledHint.hidden = granted;
+      attachLocationInput.disabled = !available;
+      if (!available) attachLocationInput.checked = false;
+      else if (wasDisabled) attachLocationInput.checked = true;
+      if (locationEnabledHint) locationEnabledHint.hidden = !available;
+      if (locationDisabledHint) locationDisabledHint.hidden = available;
     }
 
     async function initializeLocationOption() {
@@ -221,7 +61,7 @@
         const applyPermission = () => setLocationAvailability(permission.state !== 'denied');
         applyPermission();
         permission.addEventListener?.('change', applyPermission);
-      } catch (err) {
+      } catch (_) {
         setLocationAvailability(true);
       }
     }
@@ -233,7 +73,7 @@
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
-            captured_at: new Date().toISOString(),
+            capturedAt: new Date().toISOString(),
           }),
           () => resolve(null),
           { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
@@ -241,86 +81,66 @@
       });
     }
 
-    async function topUp() {
-      const profileId = profileSelect ? profileSelect.value : '';
-      if (profileId) {
-        await reserveTokens(profileId, csrf);
-      }
-    }
+    document.querySelectorAll('[data-profile-tab]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        if (!profileSelect) return;
+        profileSelect.value = tab.dataset.profileTab || '';
+        profileSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelectorAll('[data-profile-tab]').forEach((item) => {
+          const active = item === tab;
+          item.classList.toggle('is-active', active);
+          item.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+      });
+    });
 
-    await topUp();
-    await initializeLocationOption();
-
-    if (profileSelect) {
-      profileSelect.addEventListener('change', topUp);
-    }
+    initializeLocationOption();
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const submitter = event.submitter || document.activeElement;
-      const isPublish = Boolean(submitter && submitter.dataset && submitter.dataset.publish === '1');
-      const profileId = profileSelect ? profileSelect.value : '';
-      if (!profileId) {
+      if (!navigator.onLine) {
+        if (status) status.textContent = 'QRの作成にはオンライン接続が必要です。通信を確認してからもう一度お試しください。';
         return;
       }
 
-      const shouldAttachLocation = Boolean(attachLocationInput && !attachLocationInput.disabled && attachLocationInput.checked);
-      let location = null;
-      if (shouldAttachLocation) {
-        if (status) status.textContent = '位置情報を取得しています。';
-        location = await captureLocation();
-      }
-      const publicToken = await pickToken(profileId);
-      const files = Array.from(photosInput?.files || []).map((file) => ({
-        name: file.name,
-        blob: file,
-      }));
-      const reserveToken = publicToken.startsWith('draft-') ? '' : publicToken;
-      const draft = {
-        public_token: publicToken,
-        profile_id: Number(profileId),
-        body: bodyInput ? bodyInput.value : '',
-        expires_in: expiresInput ? expiresInput.value : '24h',
-        attach_location: shouldAttachLocation,
-        latitude: location?.latitude ?? null,
-        longitude: location?.longitude ?? null,
-        accuracy: location?.accuracy ?? null,
-        location_captured_at: location?.captured_at ?? null,
-        reserve_token: reserveToken,
-        csrf,
-        photos: files,
-        publish: isPublish,
-        synced_at: null,
-      };
-
-      await storeDraft(draft);
-
-      if (!isPublish) {
-        if (status) {
-          status.textContent = '一時保存しました。QR作成ボタンでQRを作成できます。';
+      const submitButton = event.submitter;
+      if (submitButton) submitButton.disabled = true;
+      try {
+        const formData = new FormData(form);
+        const shouldAttachLocation = Boolean(attachLocationInput && !attachLocationInput.disabled && attachLocationInput.checked);
+        if (shouldAttachLocation) {
+          if (status) status.textContent = '位置情報を取得しています。';
+          const location = await captureLocation();
+          if (location) {
+            formData.set('latitude', String(location.latitude));
+            formData.set('longitude', String(location.longitude));
+            formData.set('location_accuracy_m', String(location.accuracy));
+            formData.set('location_captured_at', location.capturedAt);
+          }
         }
-        return;
-      }
 
-      if (navigator.onLine) {
-        try {
-          const result = await syncDraft(draft);
-          const eventId = result && result.event_id ? String(result.event_id) : '';
-          const nextUrl = eventId
-            ? '/share-events/' + encodeURIComponent(eventId) + '/qr'
-            : (result.public_url || ('/s/' + publicToken));
-          window.location.href = nextUrl;
-          return;
-        } catch (err) {
-          console.warn('online create failed', err);
-        }
+        if (status) status.textContent = 'QRを作成しています。';
+        const response = await fetch(form.action, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'fetch' },
+          body: formData,
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.event_id) throw new Error(result.error || 'QRを作成できませんでした。');
+        window.location.href = '/share-events/' + encodeURIComponent(result.event_id) + '/qr';
+      } catch (error) {
+        if (status) status.textContent = error.message || 'QRを作成できませんでした。オンライン接続を確認して再度お試しください。';
+        if (submitButton) submitButton.disabled = false;
       }
-
-      if (status) {
-        status.textContent = '通信しにくいため一時保存しました。復帰後に同期します。';
-      }
-      window.location.href = '/share-events/qr?profile=' + encodeURIComponent(profileId) + '&token=' + encodeURIComponent(publicToken) + '&draft=1';
     });
+  }
+
+  async function handleQrPage() {
+    const expiresAt = Number(document.querySelector('meta[name="1g1a-qr-expires-at"]')?.content || 0);
+    if (expiresAt > 0 && expiresAt * 1000 < Date.now()) {
+      document.body.innerHTML = '<main style="font:16px/1.6 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px"><h1>QRの有効期限が切れています</h1><p>この共有イベントは表示できません。</p></main>';
+    }
   }
 
 
@@ -443,14 +263,10 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     handleDashboard();
+    handleQrPage();
     handleContactEditor();
     handleGuestContactActions();
-    syncPending();
     handlePwaInstall();
-  });
-
-  window.addEventListener('online', () => {
-    syncPending();
   });
 
   let deferredInstallPrompt = null;
@@ -465,7 +281,50 @@
 
   function handlePwaInstall() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
+      const appVersion = document.querySelector('meta[name="1g1a-app-version"]')?.content || '0.0.1';
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      let reloading = false;
+
+      if (standalone) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hadController && !reloading) {
+            reloading = true;
+            window.location.reload();
+          }
+        }, { once: true });
+      }
+
+      const serviceWorkerUrl = `/sw.js?v=${encodeURIComponent(appVersion)}`;
+      navigator.serviceWorker.register(serviceWorkerUrl, { updateViaCache: 'none' }).then(async (registration) => {
+        if (!standalone) return;
+
+        fetch('/pwa/session', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-1G1A-PWA': '1' }
+        }).catch(() => undefined);
+
+        try {
+          const response = await fetch('/version.json', { cache: 'no-store', credentials: 'same-origin' });
+          if (response.ok) {
+            const latest = await response.json();
+            if (typeof latest.version === 'string' && latest.version !== appVersion) {
+              window.location.reload();
+              return;
+            }
+            localStorage.setItem('1g1a-last-checked-version', latest.version);
+          }
+        } catch (_) {
+          // Version checks require a connection; cached QR display remains available offline.
+        }
+
+        try {
+          await registration.update();
+        } catch (_) {
+          // The next online PWA launch retries the update check.
+        }
+      }).catch((err) => {
         console.warn('service worker registration failed', err);
       });
     }

@@ -66,9 +66,13 @@ function app_start_session(): void
         return;
     }
 
+    // Keep server-side session data available long enough for an installed PWA.
+    // Regular browser sessions still use a session cookie and end when the browser closes.
+    ini_set('session.gc_maxlifetime', (string) (90 * 24 * 60 * 60));
     session_name((string) app_env('SESSION_NAME', '1g1a_session'));
+    $pwaSession = ($_COOKIE['1g1a_pwa_session'] ?? '') === '1' || ($_SERVER['HTTP_X_1G1A_PWA'] ?? '') === '1';
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => $pwaSession ? 90 * 24 * 60 * 60 : 0,
         'path' => '/',
         'domain' => '',
         'secure' => filter_var(app_env('SESSION_SECURE', false), FILTER_VALIDATE_BOOL),
@@ -76,6 +80,46 @@ function app_start_session(): void
         'samesite' => (string) app_env('SESSION_SAME_SITE', 'Lax'),
     ]);
     session_start();
+}
+
+function app_version(): string
+{
+    static $version = null;
+    if ($version !== null) {
+        return $version;
+    }
+
+    $path = app_root('VERSION');
+    $value = is_file($path) ? trim((string) file_get_contents($path)) : '';
+    $version = preg_match('/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/', $value) === 1 ? $value : '0.0.1';
+
+    return $version;
+}
+
+function app_enable_pwa_session(): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        app_start_session();
+    }
+
+    $params = session_get_cookie_params();
+    $expires = time() + 90 * 24 * 60 * 60;
+    setcookie(session_name(), session_id(), [
+        'expires' => $expires,
+        'path' => $params['path'] ?: '/',
+        'domain' => $params['domain'],
+        'secure' => $params['secure'],
+        'httponly' => $params['httponly'],
+        'samesite' => $params['samesite'] ?: 'Lax',
+    ]);
+    setcookie('1g1a_pwa_session', '1', [
+        'expires' => $expires,
+        'path' => $params['path'] ?: '/',
+        'domain' => $params['domain'],
+        'secure' => $params['secure'],
+        'httponly' => true,
+        'samesite' => $params['samesite'] ?: 'Lax',
+    ]);
 }
 
 function app_base_url(): string
@@ -418,11 +462,6 @@ function app_generate_public_token(PDO $db): string
     return $token;
 }
 
-function app_generate_local_token(): string
-{
-    return 'draft-' . bin2hex(random_bytes(16));
-}
-
 function app_fetch_profiles(PDO $db, int $userId): array
 {
     $stmt = $db->prepare(
@@ -720,15 +759,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
     }
 
     $body = trim((string) ($payload['body'] ?? ''));
-    $token = trim((string) ($payload['public_token'] ?? ''));
-    if ($token === '') {
-        $token = app_generate_public_token($db);
-    }
-
-    $status = (string) ($payload['status'] ?? 'ready');
-    if (!in_array($status, ['pending', 'ready'], true)) {
-        $status = 'ready';
-    }
+    $token = app_generate_public_token($db);
     $expiresIn = (string) ($payload['expires_in'] ?? '24h');
     if (!in_array($expiresIn, ['24h', '3d', '7d', '30d'], true)) {
         $expiresIn = '24h';
@@ -746,70 +777,28 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
         $latitude = $longitude = $accuracy = $capturedAt = null;
     }
 
-    $exists = $db->prepare('SELECT id FROM share_events WHERE public_token = :token LIMIT 1');
-    $exists->execute(['token' => $token]);
-    $eventId = $exists->fetchColumn();
-
-    if ($eventId !== false) {
-        $stmt = $db->prepare(
-            'UPDATE share_events
-             SET profile_id = :profile_id,
-                 body = :body,
-                 status = :status,
-                 expires_in = :expires_in,
-                 attach_location = :attach_location,
-                 latitude = :latitude,
-                 longitude = :longitude,
-                 location_accuracy_m = :accuracy,
-                 location_captured_at = :captured_at,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = :id
-             RETURNING *'
-        );
-        $stmt->execute([
-            'profile_id' => $profileId,
-            'body' => $body,
-            'status' => $status,
-            'expires_in' => $expiresIn,
-            'attach_location' => $attachLocation ? 'true' : 'false',
-            'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
-            'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
-            'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,
-            'captured_at' => $capturedAt !== null && $capturedAt !== '' ? $capturedAt : null,
-            'id' => (int) $eventId,
-        ]);
-        $event = $stmt->fetch();
-        if (!$event) {
-            throw new RuntimeException('共有イベントの更新に失敗しました。');
-        }
-    } else {
-        $stmt = $db->prepare(
-            'INSERT INTO share_events (profile_id, public_token, body, status, expires_in, attach_location, latitude, longitude, location_accuracy_m, location_captured_at)
-             VALUES (:profile_id, :public_token, :body, :status, :expires_in, :attach_location, :latitude, :longitude, :accuracy, :captured_at)
-             RETURNING *'
-        );
-        $stmt->execute([
-            'profile_id' => $profileId,
-            'public_token' => $token,
-            'body' => $body,
-            'status' => $status,
-            'expires_in' => $expiresIn,
-            'attach_location' => $attachLocation ? 'true' : 'false',
-            'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
-            'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
-            'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,
-            'captured_at' => $capturedAt !== null && $capturedAt !== '' ? $capturedAt : null,
-        ]);
-        $event = $stmt->fetch();
-        if (!$event) {
-            throw new RuntimeException('共有イベントの作成に失敗しました。');
-        }
+    $stmt = $db->prepare(
+        "INSERT INTO share_events (profile_id, public_token, body, status, expires_in, attach_location, latitude, longitude, location_accuracy_m, location_captured_at)
+         VALUES (:profile_id, :public_token, :body, 'ready', :expires_in, :attach_location, :latitude, :longitude, :accuracy, :captured_at)
+         RETURNING *"
+    );
+    $stmt->execute([
+        'profile_id' => $profileId,
+        'public_token' => $token,
+        'body' => $body,
+        'expires_in' => $expiresIn,
+        'attach_location' => $attachLocation ? 'true' : 'false',
+        'latitude' => $latitude !== null && $latitude !== '' ? (float) $latitude : null,
+        'longitude' => $longitude !== null && $longitude !== '' ? (float) $longitude : null,
+        'accuracy' => $accuracy !== null && $accuracy !== '' ? (float) $accuracy : null,
+        'captured_at' => $capturedAt !== null && $capturedAt !== '' ? $capturedAt : null,
+    ]);
+    $event = $stmt->fetch();
+    if (!$event) {
+        throw new RuntimeException('共有イベントの作成に失敗しました。');
     }
 
     $eventId = (int) $event['id'];
-
-    $deletePhotos = $db->prepare('DELETE FROM share_event_photos WHERE share_event_id = :id');
-    $deletePhotos->execute(['id' => $eventId]);
 
     if (isset($payload['photos']) && is_array($payload['photos'])) {
         $photoStmt = $db->prepare(
@@ -834,77 +823,7 @@ function app_save_share_event(PDO $db, array $user, array $payload): array
         }
     }
 
-    if (isset($payload['reserve_token']) && is_string($payload['reserve_token']) && $payload['reserve_token'] !== '') {
-        app_use_reserved_token($db, (int) $user['id'], $profileId, (string) $payload['reserve_token']);
-    }
-
     return $event;
-}
-
-function app_reserve_share_tokens(PDO $db, int $userId, int $profileId, int $count = 3): array
-{
-    $profile = app_fetch_profile($db, $profileId);
-    if (!$profile || (int) $profile['user_id'] !== $userId) {
-        throw new InvalidArgumentException('共有プロフィールが見つかりません。');
-    }
-
-    $count = max(1, min($count, 10));
-    $tokens = [];
-    for ($i = 0; $i < $count; $i++) {
-        $tokens[] = app_generate_local_token();
-    }
-
-    $insert = $db->prepare(
-        "INSERT INTO reserved_share_tokens (user_id, profile_id, public_token, status, reserved_at, expires_at)
-         VALUES (:user_id, :profile_id, :public_token, 'available', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '7 days')
-         ON CONFLICT (public_token) DO NOTHING
-         RETURNING *"
-    );
-
-    $rows = [];
-    foreach ($tokens as $token) {
-        $insert->execute([
-            'user_id' => $userId,
-            'profile_id' => $profileId,
-            'public_token' => $token,
-        ]);
-        $row = $insert->fetch();
-        if ($row) {
-            $rows[] = $row;
-        }
-    }
-
-    return $rows;
-}
-
-function app_fetch_reserved_tokens(PDO $db, int $userId, int $profileId): array
-{
-    $stmt = $db->prepare(
-        "SELECT *
-         FROM reserved_share_tokens
-         WHERE user_id = :user_id AND profile_id = :profile_id AND status = 'available'
-         ORDER BY reserved_at DESC, id DESC"
-    );
-    $stmt->execute([
-        'user_id' => $userId,
-        'profile_id' => $profileId,
-    ]);
-
-    return $stmt->fetchAll() ?: [];
-}
-
-function app_use_reserved_token(PDO $db, int $userId, int $profileId, string $token): void
-{
-    $stmt = $db->prepare(
-        "UPDATE reserved_share_tokens
-         SET status = 'used', used_at = CURRENT_TIMESTAMP
-         WHERE user_id = :user_id AND profile_id = :profile_id AND public_token = :token"
-    );
-    $stmt->execute([
-        'user_id' => $userId,
-        'profile_id' => $profileId,
-        'token' => $token,
-    ]);
 }
 
 function app_normalize_guest_name(string $name): string
@@ -1193,12 +1112,15 @@ function app_render(string $title, string $body, array $context = []): void
     $showFlash = array_key_exists('flash', $context) ? (bool) $context['flash'] : true;
     $cssVersion = (string) (filemtime(app_root('public/assets/app.css')) ?: time());
     $jsVersion = (string) (filemtime(app_root('public/assets/app.js')) ?: time());
+    $version = app_version();
 
     header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: private, no-store, no-cache, must-revalidate');
     echo '<!doctype html><html lang="ja"><head><meta charset="utf-8">';
     echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . app_h($title) . ' | ' . app_h($siteName) . '</title>';
     echo '<meta name="description" content="1G1A の共有プロフィールサービス">';
+    echo '<meta name="1g1a-app-version" content="' . app_h($version) . '">';
     if (is_string($meta) && $meta !== '') {
         echo $meta;
     }
@@ -1218,7 +1140,7 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<nav class="nav">';
         if ($user) {
             echo '<a class="icon-nav" href="' . app_h(app_url('/dashboard')) . '" aria-label="Home" title="Home"><i class="fa-solid fa-house" aria-hidden="true"></i></a>';
-            echo '<a class="icon-nav" href="' . app_h(app_url('/logout')) . '" aria-label="Logout" title="Logout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i></a>';
+            echo '<details class="settings-menu"><summary class="icon-nav" aria-label="設定メニュー" title="設定"><i class="fa-solid fa-gear" aria-hidden="true"></i></summary><div class="settings-menu-panel"><a href="' . app_h(app_url('/news')) . '">新着情報</a><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a><a href="' . app_h(app_url('/logout')) . '">ログアウト</a><span class="app-version">v' . app_h($version) . '</span></div></details>';
         } else {
             echo "<a class=\"icon-nav\" href=\"/\" aria-label=\"Home\" title=\"Home\"><i class=\"fa-solid fa-house\" aria-hidden=\"true\"></i></a>";
         }
