@@ -73,7 +73,7 @@ a:hover { text-decoration: underline; }
 .settings-menu { position: relative; }
 .settings-menu > summary { cursor: pointer; list-style: none; }
 .settings-menu > summary::-webkit-details-marker { display: none; }
-.settings-menu-trigger { display: inline-flex; width: auto; gap: 9px; padding: 0 13px; font-size: 0.9rem; font-weight: 700; }
+.settings-menu > summary.settings-menu-trigger { display: inline-flex; width: auto; height: 46px; align-items: center; justify-content: center; gap: 9px; padding: 0 13px; font-size: 0.9rem; font-weight: 700; }
 .settings-menu-trigger span { line-height: 1; }
 .settings-menu-caret { font-size: 0.68rem !important; transition: transform 150ms ease; }
 .settings-menu[open] .settings-menu-caret { transform: rotate(180deg); }
