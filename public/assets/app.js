@@ -36,6 +36,9 @@
     const attachLocationInput = document.getElementById('attach-location');
     const locationEnabledHint = document.getElementById('location-enabled-hint');
     const locationDisabledHint = document.getElementById('location-disabled-hint');
+    const profileTabs = Array.from(document.querySelectorAll('[data-profile-tab]'));
+    const profilePanel = document.getElementById('share-profile-panel');
+    const selectedProfileLabel = document.getElementById('profile-selected-label');
 
     function setLocationAvailability(available) {
       if (!attachLocationInput) return;
@@ -81,16 +84,35 @@
       });
     }
 
-    document.querySelectorAll('[data-profile-tab]').forEach((tab) => {
-      tab.addEventListener('click', () => {
-        if (!profileSelect) return;
-        profileSelect.value = tab.dataset.profileTab || '';
-        profileSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        document.querySelectorAll('[data-profile-tab]').forEach((item) => {
-          const active = item === tab;
-          item.classList.toggle('is-active', active);
-          item.setAttribute('aria-selected', active ? 'true' : 'false');
-        });
+    function activateProfileTab(tab, moveFocus = false) {
+      if (!tab) return;
+      if (profileSelect) profileSelect.value = tab.dataset.profileTab || '';
+      profileTabs.forEach((item) => {
+        const active = item === tab;
+        item.classList.toggle('is-active', active);
+        item.setAttribute('aria-selected', active ? 'true' : 'false');
+        item.tabIndex = active ? 0 : -1;
+      });
+      if (profilePanel && tab.id) profilePanel.setAttribute('aria-labelledby', tab.id);
+      if (selectedProfileLabel) {
+        const profileName = tab.dataset.profileName || tab.textContent.trim();
+        selectedProfileLabel.textContent = `${profileName}のプロフィールでQRを作成します。`;
+      }
+      if (moveFocus) tab.focus();
+    }
+
+    profileTabs.forEach((tab) => {
+      tab.addEventListener('click', () => activateProfileTab(tab));
+      tab.addEventListener('keydown', (event) => {
+        const currentIndex = profileTabs.indexOf(tab);
+        let nextIndex = currentIndex;
+        if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % profileTabs.length;
+        else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + profileTabs.length) % profileTabs.length;
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = profileTabs.length - 1;
+        else return;
+        event.preventDefault();
+        activateProfileTab(profileTabs[nextIndex], true);
       });
     });
 

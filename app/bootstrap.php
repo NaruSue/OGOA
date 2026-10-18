@@ -1140,7 +1140,7 @@ function app_render(string $title, string $body, array $context = []): void
         echo '<nav class="nav">';
         if ($user) {
             echo '<a class="icon-nav" href="' . app_h(app_url('/dashboard')) . '" aria-label="Home" title="Home"><i class="fa-solid fa-house" aria-hidden="true"></i></a>';
-            echo '<details class="settings-menu"><summary class="icon-nav" aria-label="設定メニュー" title="設定"><i class="fa-solid fa-gear" aria-hidden="true"></i></summary><div class="settings-menu-panel"><a href="' . app_h(app_url('/news')) . '">新着情報</a><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a><a href="' . app_h(app_url('/logout')) . '">ログアウト</a><span class="app-version">v' . app_h($version) . '</span></div></details>';
+            echo '<details class="settings-menu"><summary class="icon-nav settings-menu-trigger" aria-label="メニュー" title="メニュー"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>メニュー</span><i class="fa-solid fa-chevron-down settings-menu-caret" aria-hidden="true"></i></summary><div class="settings-menu-panel"><a href="' . app_h(app_url('/news')) . '">新着情報</a><a href="' . app_h(app_url('/profiles')) . '">共有プロフィール</a><a href="' . app_h(app_url('/account')) . '">基本プロフィール</a><a href="' . app_h(app_url('/logout')) . '">ログアウト</a><span class="app-version">v' . app_h($version) . '</span></div></details>';
         } else {
             echo "<a class=\"icon-nav\" href=\"/\" aria-label=\"Home\" title=\"Home\"><i class=\"fa-solid fa-house\" aria-hidden=\"true\"></i></a>";
         }

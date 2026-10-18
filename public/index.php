@@ -483,6 +483,10 @@ function render_dashboard(?PDO $db): void
     $createAction = app_h(app_url('/share-events/create'));
     $csrf = app_h(app_csrf_token());
     $profileHint = $profiles !== [] ? 'まず共有プロフィールを選んでください。' : '共有プロフィールがまだありません。';
+    $activeProfile = $profiles[0] ?? null;
+    $activeProfileId = $activeProfile !== null ? (int) $activeProfile['id'] : 0;
+    $activeProfileTabId = $activeProfileId > 0 ? 'profile-tab-' . $activeProfileId : '';
+    $activeProfileName = $activeProfile !== null ? (string) $activeProfile['profile_name'] : '';
 
     ob_start();
     ?>
@@ -492,47 +496,51 @@ function render_dashboard(?PDO $db): void
       <input type="hidden" name="_csrf" value="<?= $csrf ?>">
       <fieldset class="profile-picker">
         <legend>今回表示するプロフィール</legend>
-        <div class="profile-tabs" role="tablist" aria-label="共有プロフィール">
+        <div class="profile-tabs" role="tablist" aria-label="共有プロフィール" aria-orientation="horizontal">
           <?php foreach ($profiles as $index => $profile): ?>
-            <button class="profile-tab<?= $index === 0 ? ' is-active' : '' ?>" type="button" role="tab" aria-selected="<?= $index === 0 ? 'true' : 'false' ?>" data-profile-tab="<?= (int) $profile['id'] ?>"><?= app_h((string) $profile['profile_name']) ?></button>
+            <?php $profileTabId = 'profile-tab-' . (int) $profile['id']; ?>
+            <button class="profile-tab<?= $index === 0 ? ' is-active' : '' ?>" id="<?= app_h($profileTabId) ?>" type="button" role="tab" aria-selected="<?= $index === 0 ? 'true' : 'false' ?>" aria-controls="share-profile-panel" tabindex="<?= $index === 0 ? '0' : '-1' ?>" data-profile-tab="<?= (int) $profile['id'] ?>" data-profile-name="<?= app_h((string) $profile['profile_name']) ?>"><?= app_h((string) $profile['profile_name']) ?></button>
           <?php endforeach; ?>
         </div>
-        <select name="profile_id" id="profile-select" required class="profile-select-native" aria-label="共有プロフィール">
+        <select name="profile_id" id="profile-select" required class="profile-select-native" aria-hidden="true" tabindex="-1">
           <?= $profileOptions ?>
         </select>
-        <p class="profile-picker-hint">選択したプロフィールでQRを作成します。</p>
+        <p class="profile-picker-hint">タブを切り替えると、QRに使うプロフィールが変わります。</p>
       </fieldset>
-      <label>今日のメッセージ <span class="optional">任意</span>
-        <textarea name="body" id="share-body" rows="4" maxlength="2000" placeholder="今日はありがとうございました。"></textarea>
-      </label>
-      <label class="upload-field">写真を追加 <span class="optional">複数可 / カメラ起動可</span>
-        <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
-        <span class="upload-note">共有イベントの作成と写真の送信にはオンライン接続が必要です。</span>
-      </label>
-      <label>QRの有効期限
-        <select name="expires_in" id="share-expires">
-          <option value="24h" selected>24時間</option>
-          <option value="3d">3日</option>
-          <option value="7d">1週間</option>
-          <option value="30d">1か月</option>
-        </select>
-      </label>
-      <div class="location-option" data-location-option>
-        <div class="location-option-row">
-          <span>位置情報をつける</span>
-          <label class="switch-control" aria-label="位置情報をつける">
-            <input type="hidden" name="attach_location" value="0">
-            <input type="checkbox" name="attach_location" id="attach-location" value="1" checked disabled>
-            <span class="switch-slider" aria-hidden="true"></span>
-          </label>
+      <div class="share-profile-panel" id="share-profile-panel" role="tabpanel"<?= $activeProfileTabId !== '' ? ' aria-labelledby="' . app_h($activeProfileTabId) . '"' : '' ?> tabindex="-1">
+        <p class="profile-selected-label" id="profile-selected-label" aria-live="polite"><?= $activeProfileName !== '' ? app_h($activeProfileName) . 'のプロフィールでQRを作成します。' : 'プロフィールを選ぶと、そのプロフィールでQRを作成します。' ?></p>
+        <label>今日のメッセージ <span class="optional">任意</span>
+          <textarea name="body" id="share-body" rows="4" maxlength="2000" placeholder="今日はありがとうございました。"></textarea>
+        </label>
+        <label class="upload-field">写真を追加 <span class="optional">複数可 / カメラ起動可</span>
+          <input type="file" name="photos[]" id="share-photos" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+          <span class="upload-note">共有イベントの作成と写真の送信にはオンライン接続が必要です。</span>
+        </label>
+        <label>QRの有効期限
+          <select name="expires_in" id="share-expires">
+            <option value="24h" selected>24時間</option>
+            <option value="3d">3日</option>
+            <option value="7d">1週間</option>
+            <option value="30d">1か月</option>
+          </select>
+        </label>
+        <div class="location-option" data-location-option>
+          <div class="location-option-row">
+            <span>位置情報をつける</span>
+            <label class="switch-control" aria-label="位置情報をつける">
+              <input type="hidden" name="attach_location" value="0">
+              <input type="checkbox" name="attach_location" id="attach-location" value="1" checked disabled>
+              <span class="switch-slider" aria-hidden="true"></span>
+            </label>
+          </div>
+          <p class="muted location-hint" id="location-enabled-hint" hidden>位置情報をつけると地図を添付できます</p>
+          <p class="muted location-hint" id="location-disabled-hint">位置情報を許可すると使えます</p>
         </div>
-        <p class="muted location-hint" id="location-enabled-hint" hidden>位置情報をつけると地図を添付できます</p>
-        <p class="muted location-hint" id="location-disabled-hint">位置情報を許可すると使えます</p>
+        <div class="launch-actions">
+          <button class="button primary" type="submit" data-publish="1">QRを作成</button>
+        </div>
+        <div class="draft-banner" id="draft-status"><?= app_h($statusLine) ?></div>
       </div>
-      <div class="launch-actions">
-        <button class="button primary" type="submit" data-publish="1">QRを作成</button>
-      </div>
-      <div class="draft-banner" id="draft-status"><?= app_h($statusLine) ?></div>
     </form>
   </div>
 </section>
