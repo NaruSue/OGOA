@@ -541,7 +541,7 @@ function render_dashboard(?PDO $db): void
         <div class="launch-actions">
           <button class="button primary" type="submit" data-publish="1">QRを作成</button>
         </div>
-        <aside class="offline-guidance" aria-label="オフライン時の利用について">
+        <aside class="offline-guidance" id="offline-guidance" aria-label="オフライン時の利用について" hidden>
           <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
           <div><strong>オフラインではQRを新しく作成できません。</strong><p>期限内で、以前この端末で開いたQRは表示できます。</p></div>
         </aside>

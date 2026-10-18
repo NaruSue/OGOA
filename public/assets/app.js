@@ -33,6 +33,7 @@
 
     const profileSelect = document.getElementById('profile-select');
     const status = document.getElementById('draft-status');
+    const offlineGuidance = document.getElementById('offline-guidance');
     const photoInput = document.getElementById('share-photos');
     const photoSummary = document.getElementById('share-photo-summary');
     const attachLocationInput = document.getElementById('attach-location');
@@ -45,6 +46,14 @@
       status.hidden = false;
       status.textContent = message;
     }
+
+    function updateOfflineGuidance() {
+      if (offlineGuidance) offlineGuidance.hidden = navigator.onLine;
+    }
+
+    updateOfflineGuidance();
+    window.addEventListener('online', updateOfflineGuidance);
+    window.addEventListener('offline', updateOfflineGuidance);
 
     function setLocationAvailability(available) {
       if (!attachLocationInput) return;
