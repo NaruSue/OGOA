@@ -1329,7 +1329,7 @@ function app_render(string $title, string $body, array $context = []): void
         }
         if ($user) {
             $accountName = (string) ($user['account_display_name'] ?? $user['name'] ?? 'User');
-            echo '<a class="user-chip" href="' . app_h(app_url('/account')) . '">' . app_render_profile_avatar(app_account_avatar_url($user), $accountName, 'avatar-mini') . '<span>' . app_h($accountName) . '</span></a>';
+            echo '<a class="user-chip" href="' . app_h(app_url('/account')) . '" aria-label="アカウント情報">' . app_render_profile_avatar(app_account_avatar_url($user), $accountName, 'avatar-mini') . '</a>';
         }
         echo '</header>';
     }

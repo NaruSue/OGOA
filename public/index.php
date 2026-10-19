@@ -878,7 +878,6 @@ function render_account(?PDO $db, string $method): void
       <?= app_render_profile_avatar($avatarUrl, $displayName) ?>
       <div>
         <h2><?= app_h($displayName) ?></h2>
-        <p class="muted"><?= app_h($email) ?></p>
       </div>
     </div>
     <form method="post" enctype="multipart/form-data" class="form">
