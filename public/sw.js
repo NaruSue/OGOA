@@ -4,7 +4,10 @@ const QR_CACHE = '1g1a-offline-qrs-v1';
 const APP_SHELL = [
   `/assets/app.css?v=${APP_VERSION}`,
   `/assets/app.js?v=${APP_VERSION}`,
-  '/assets/icon.svg',
+  `/assets/icon.svg?v=${APP_VERSION}`,
+  `/assets/icon-192.png?v=${APP_VERSION}`,
+  `/assets/icon-512.png?v=${APP_VERSION}`,
+  `/assets/apple-touch-icon.png?v=${APP_VERSION}`,
   '/manifest.webmanifest'
 ];
 const QR_PATH = /^\/share-events\/\d+\/qr$/;
@@ -71,7 +74,7 @@ async function offlineQrPage() {
   const rows = entries.length
     ? entries.map((entry) => `<li><a href="${escapeHtml(entry.url)}">${escapeHtml(entry.title)} のQRを表示</a></li>`).join('')
     : '<li>表示できる保存済みQRはありません。</li>';
-  return new Response(`<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f5b66"><title>オフラインのQR</title><body style="font:16px/1.7 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;color:#203033"><h1>オフライン</h1><p>QRの新規作成やプロフィール設定にはオンライン接続が必要です。期限内の保存済みQRを表示できます。</p><ul>${rows}</ul></body></html>`, {
+  return new Response(`<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#155c70"><title>オフラインのQR</title><body style="font:16px/1.7 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;color:#203033"><h1>オフライン</h1><p>QRの新規作成やプロフィール設定にはオンライン接続が必要です。期限内の保存済みQRを表示できます。</p><ul>${rows}</ul></body></html>`, {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
   });

@@ -1422,8 +1422,10 @@ function app_render(string $title, string $body, array $context = []): void
     echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
     echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">';
     echo '<link rel="manifest" href="' . app_h(app_url('/manifest.webmanifest')) . '">';
+    echo '<link rel="icon" type="image/svg+xml" href="' . app_h(app_url('/assets/icon.svg?v=' . rawurlencode($version))) . '">';
+    echo '<link rel="apple-touch-icon" sizes="180x180" href="' . app_h(app_url('/assets/apple-touch-icon.png?v=' . rawurlencode($version))) . '">';
     echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">';
-    echo '<meta name="theme-color" content="#0f5b66">';
+    echo '<meta name="theme-color" content="#155c70">';
     echo '<link rel="stylesheet" href="' . app_h(app_url('/assets/app.css?v=' . $cssVersion)) . '">';
     if ($guestSkin !== '') {
         echo '<link' . ($dashboardSkin ? ' id="dashboard-skin-stylesheet"' : '') . ' rel="stylesheet" href="' . app_h(app_url('/skins/guest/' . $guestSkin . '/skin.css?v=' . rawurlencode($cssVersion))) . '">';

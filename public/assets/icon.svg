@@ -1,5 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="116" fill="#0f5b66"/>
-  <path d="M98 158c30-38 76-60 130-60 93 0 164 70 164 160 0 92-72 164-166 164-52 0-98-21-128-56l47-43c20 23 49 36 82 36 58 0 101-44 101-101 0-55-43-97-100-97-34 0-64 14-83 39l45 1v55H94V158h4Z" fill="#fff"/>
-  <text x="256" y="286" text-anchor="middle" font-family="Arial, sans-serif" font-size="78" font-weight="800" fill="#fff">1G1A</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="1G1A">
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#087d7a"/>
+      <stop offset="0.54" stop-color="#155c70"/>
+      <stop offset="1" stop-color="#242d58"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.82" cy="0.12" r="0.75">
+      <stop offset="0" stop-color="#ffbe78" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="#ffbe78" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#f1e9dc"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffbd86"/>
+      <stop offset="1" stop-color="#f27e72"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14"/>
+      <feOffset dy="13"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.26"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#night)"/>
+  <rect width="512" height="512" fill="url(#halo)"/>
+  <circle cx="84" cy="432" r="154" fill="#36c7ae" opacity="0.1"/>
+  <rect x="30" y="30" width="452" height="452" rx="116" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="2"/>
+
+  <g fill="none" stroke="#e6fff5" stroke-linecap="round" stroke-width="14" opacity="0.78">
+    <path d="M87 155v-34a20 20 0 0 1 20-20h34"/>
+    <path d="M425 155v-34a20 20 0 0 0-20-20h-34"/>
+    <path d="M87 357v34a20 20 0 0 0 20 20h34"/>
+    <path d="M425 357v34a20 20 0 0 1-20 20h-34"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="94" y="116" width="324" height="280" rx="70" fill="url(#card)"/>
+    <circle cx="203" cy="202" r="31" fill="#087d7a"/>
+    <circle cx="309" cy="202" r="31" fill="url(#coral)"/>
+    <path d="M139 274c0-31 25-56 56-56h16c31 0 56 25 56 56v10H139z" fill="#087d7a"/>
+    <path d="M245 274c0-31 25-56 56-56h16c31 0 56 25 56 56v10H245z" fill="url(#coral)"/>
+    <path d="M249 238h14" stroke="#d19a5a" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="256" cy="238" r="7" fill="#d19a5a"/>
+    <text x="256" y="344" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="55" font-weight="800" letter-spacing="1" fill="#173d48">1G1A</text>
+    <text x="256" y="371" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="4.5" fill="#618087">MEET · CONNECT</text>
+  </g>
+
+  <circle cx="416" cy="80" r="5" fill="#ffe0a8"/>
+  <circle cx="98" cy="430" r="4" fill="#91f1d8" opacity="0.9"/>
 </svg>
