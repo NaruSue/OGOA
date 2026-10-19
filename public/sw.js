@@ -5,6 +5,7 @@ const APP_SHELL = [
   `/assets/app.css?v=${APP_VERSION}`,
   `/assets/app.js?v=${APP_VERSION}`,
   `/assets/icon.svg?v=${APP_VERSION}`,
+  `/assets/favicon-32.png?v=${APP_VERSION}`,
   `/assets/icon-192.png?v=${APP_VERSION}`,
   `/assets/icon-512.png?v=${APP_VERSION}`,
   `/assets/apple-touch-icon.png?v=${APP_VERSION}`,
