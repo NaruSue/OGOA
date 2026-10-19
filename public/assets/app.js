@@ -1,4 +1,74 @@
 (function () {
+  const diagnosticStorageKey = '1g1a-pwa-diagnostics-v1';
+  const diagnosticLimit = 100;
+  const isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  function readDiagnostics() {
+    try {
+      const value = JSON.parse(localStorage.getItem(diagnosticStorageKey) || '[]');
+      return Array.isArray(value) ? value.filter((item) => item && typeof item.id === 'string') : [];
+    } catch (_) { return []; }
+  }
+
+  function cleanDiagnosticText(value) {
+    return String(value || '')
+      .replace(/https?:\/\/[^\s)'"<>]+/gi, '[url]')
+      .replace(/\bBearer\s+\S+/gi, 'Bearer [redacted]')
+      .replace(/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, '[token]')
+      .replace(/\b(?:access[_-]?token|refresh[_-]?token|authorization|cookie)\s*[:=]\s*\S+/gi, '[credential]')
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
+      .replace(/\b[a-f0-9]{32,}\b/gi, '[token]')
+      .slice(0, 500);
+  }
+
+  function recordDiagnostic(kind, message) {
+    if (!isStandaloneApp) return;
+    const records = readDiagnostics();
+    records.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, at: new Date().toISOString(), kind: String(kind).slice(0, 40), message: cleanDiagnosticText(message) });
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    try { localStorage.setItem(diagnosticStorageKey, JSON.stringify(records.filter((item) => Date.parse(item.at) >= cutoff).slice(-diagnosticLimit))); } catch (_) { /* best-effort */ }
+  }
+
+  window.addEventListener('error', (event) => {
+    const source = event.filename ? cleanDiagnosticText(event.filename) : '';
+    recordDiagnostic('javascript_error', `${event.error?.name || 'Error'}: ${event.message || 'unknown'}${source ? ` (${source})` : ''}`);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    recordDiagnostic('unhandled_rejection', reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason || 'unknown rejection'));
+  });
+  window.addEventListener('online', () => recordDiagnostic('network', 'online'));
+  window.addEventListener('offline', () => recordDiagnostic('network', 'offline'));
+
+  function handleDiagnosticUpload() {
+    const form = document.querySelector('[data-diagnostic-form]');
+    const field = form?.querySelector('[name="diagnostics_json"]');
+    if (!form || !field) return;
+    const url = new URL(location.href);
+    if (url.searchParams.get('diagnostics') === 'sent') {
+      try {
+        const pendingIds = JSON.parse(sessionStorage.getItem('1g1a-pending-diagnostic-ids') || '[]');
+        const pending = new Set(Array.isArray(pendingIds) ? pendingIds : []);
+        localStorage.setItem(diagnosticStorageKey, JSON.stringify(readDiagnostics().filter((item) => !pending.has(item.id))));
+        sessionStorage.removeItem('1g1a-pending-diagnostic-ids');
+        url.searchParams.delete('diagnostics');
+        history.replaceState(null, '', url);
+      } catch (_) { /* keep logs if storage is unavailable */ }
+    }
+    form.addEventListener('submit', (event) => {
+      const records = readDiagnostics();
+      if (records.length === 0) {
+        event.preventDefault();
+        window.alert('送信できるアプリログはありません。');
+        return;
+      }
+      field.value = JSON.stringify(records.map(({ id, at, kind, message }) => ({ id, at, kind, message })));
+      try { sessionStorage.setItem('1g1a-pending-diagnostic-ids', JSON.stringify(records.map((item) => item.id))); } catch (_) { /* send still proceeds */ }
+    });
+  }
+
+  recordDiagnostic('app_start', `${document.querySelector('meta[name="1g1a-app-version"]')?.content || 'unknown'}; standalone=${isStandaloneApp}`);
+
   async function cacheVisibleQrPages() {
     if (!navigator.onLine || !('serviceWorker' in navigator)) return;
     try {
@@ -323,6 +393,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    handleDiagnosticUpload();
     handleBrandMenus();
     handleDashboard();
     handleQrPage();
@@ -482,7 +553,13 @@
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'X-1G1A-PWA': '1' }
-        }).catch(() => undefined);
+        }).then(async (response) => {
+          let details = {};
+          try { details = await response.json(); } catch (_) { /* status is still useful */ }
+          recordDiagnostic('pwa_session', `status=${response.status}; ok=${response.ok}; authenticated=${details.authenticated === true}`);
+        }).catch((error) => {
+          recordDiagnostic('pwa_session_error', `${error?.name || 'Error'}: ${error?.message || 'request failed'}`);
+        });
 
         try {
           const response = await fetch('/version.json', { cache: 'no-store', credentials: 'same-origin' });

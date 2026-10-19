@@ -60,6 +60,120 @@ function app_env(string $key, mixed $default = null): mixed
     return $_ENV[$key] ?? $_SERVER[$key] ?? $default;
 }
 
+final class AppDatabaseSessionHandler implements SessionHandlerInterface
+{
+    private ?string $lockedSessionKey = null;
+
+    public function __construct(private PDO $db) {}
+
+    public function available(): bool
+    {
+        try {
+            $this->db->query('SELECT 1 FROM app_sessions LIMIT 0');
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    public function open(string $path, string $name): bool { return true; }
+    public function close(): bool
+    {
+        if ($this->lockedSessionKey === null) return true;
+        try {
+            $stmt = $this->db->prepare('SELECT pg_advisory_unlock(hashtextextended(:session_key, 0))');
+            $stmt->execute(['session_key' => $this->lockedSessionKey]);
+        } catch (Throwable) {
+            return false;
+        } finally {
+            $this->lockedSessionKey = null;
+        }
+        return true;
+    }
+
+    public function read(string $id): string|false
+    {
+        try {
+            $sessionKey = hash('sha256', $id);
+            $lock = $this->db->prepare('SELECT pg_advisory_lock(hashtextextended(:session_key, 0))');
+            $lock->execute(['session_key' => $sessionKey]);
+            $this->lockedSessionKey = $sessionKey;
+            $stmt = $this->db->prepare('SELECT session_data FROM app_sessions WHERE session_key = :session_key AND expires_at > CURRENT_TIMESTAMP');
+            $stmt->execute(['session_key' => $sessionKey]);
+            $data = $stmt->fetchColumn();
+            if (is_string($data)) return $data;
+
+            // Migrate an existing PHP file session on its first request after this handler is enabled.
+            $legacyPath = $this->legacySessionFilePath($id);
+            if ($legacyPath !== null && is_file($legacyPath)) {
+                $legacyData = @file_get_contents($legacyPath);
+                if (is_string($legacyData)) return $legacyData;
+            }
+            return '';
+        } catch (Throwable) {
+            $legacyPath = $this->legacySessionFilePath($id);
+            $legacyData = $legacyPath !== null ? @file_get_contents($legacyPath) : false;
+            return is_string($legacyData) ? $legacyData : '';
+        }
+    }
+
+    public function write(string $id, string $data): bool
+    {
+        try {
+            $lifetime = max(60, (int) ini_get('session.gc_maxlifetime'));
+            $stmt = $this->db->prepare(
+                'INSERT INTO app_sessions (session_key, session_data, expires_at, updated_at)
+                 VALUES (:session_key, :data, CURRENT_TIMESTAMP + make_interval(secs => CAST(:lifetime AS DOUBLE PRECISION)), CURRENT_TIMESTAMP)
+                 ON CONFLICT (session_key) DO UPDATE SET
+                    session_data = EXCLUDED.session_data,
+                    expires_at = EXCLUDED.expires_at,
+                    updated_at = CURRENT_TIMESTAMP'
+            );
+            $stmt->execute(['session_key' => hash('sha256', $id), 'data' => $data, 'lifetime' => $lifetime]);
+            $legacyPath = $this->legacySessionFilePath($id);
+            if ($legacyPath !== null && is_file($legacyPath)) @unlink($legacyPath);
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    public function destroy(string $id): bool
+    {
+        try {
+            $stmt = $this->db->prepare('DELETE FROM app_sessions WHERE session_key = :session_key');
+            $stmt->execute(['session_key' => hash('sha256', $id)]);
+            $legacyPath = $this->legacySessionFilePath($id);
+            if ($legacyPath !== null && is_file($legacyPath)) @unlink($legacyPath);
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    public function gc(int $max_lifetime): int|false
+    {
+        try {
+            $stmt = $this->db->prepare('DELETE FROM app_sessions WHERE expires_at <= CURRENT_TIMESTAMP');
+            $stmt->execute();
+            return $stmt->rowCount();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function legacySessionFilePath(string $id): ?string
+    {
+        if (preg_match('/\A[A-Za-z0-9,-]+\z/', $id) !== 1) return null;
+        $settings = explode(';', (string) ini_get('session.save_path'));
+        $path = (string) end($settings);
+        if ($path === '') return null;
+        $depth = count($settings) > 1 ? max(0, min(5, (int) $settings[0])) : 0;
+        for ($i = 0; $i < $depth; $i++) $path .= DIRECTORY_SEPARATOR . $id[$i];
+        return rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'sess_' . $id;
+    }
+}
+
 function app_start_session(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -69,6 +183,7 @@ function app_start_session(): void
     // Keep server-side session data available long enough for an installed PWA.
     // Regular browser sessions still use a session cookie and end when the browser closes.
     ini_set('session.gc_maxlifetime', (string) (90 * 24 * 60 * 60));
+    ini_set('session.lazy_write', '0');
     session_name((string) app_env('SESSION_NAME', '1g1a_session'));
     $pwaSession = ($_COOKIE['1g1a_pwa_session'] ?? '') === '1' || ($_SERVER['HTTP_X_1G1A_PWA'] ?? '') === '1';
     session_set_cookie_params([
@@ -79,6 +194,15 @@ function app_start_session(): void
         'httponly' => filter_var(app_env('SESSION_HTTP_ONLY', true), FILTER_VALIDATE_BOOL),
         'samesite' => (string) app_env('SESSION_SAME_SITE', 'Lax'),
     ]);
+    if ($pwaSession) {
+        $sessionDb = app_db();
+    } else {
+        $sessionDb = null;
+    }
+    if ($sessionDb !== null) {
+        $handler = new AppDatabaseSessionHandler($sessionDb);
+        if ($handler->available()) session_set_save_handler($handler, true);
+    }
     session_start();
 }
 

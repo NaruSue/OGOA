@@ -26,7 +26,7 @@ if ($path === '/pwa/session' && $method === 'POST') {
         app_json(['error' => 'PWA launch required'], 400);
     }
     app_enable_pwa_session();
-    app_json(['ok' => true, 'maxAgeDays' => 90]);
+    app_json(['ok' => true, 'maxAgeDays' => 90, 'authenticated' => $db !== null && app_current_user($db) !== null]);
 }
 
 if ($path === '/' && $method === 'GET') {
@@ -836,6 +836,57 @@ function render_account(?PDO $db, string $method): void
 
     if ($method === 'POST') {
         app_require_csrf();
+        if (($_POST['action'] ?? '') === 'send_diagnostics') {
+            $rawDiagnostics = (string) ($_POST['diagnostics_json'] ?? '');
+            $decodedDiagnostics = strlen($rawDiagnostics) <= 65536 ? json_decode($rawDiagnostics, true) : null;
+            if (!is_array($decodedDiagnostics) || count($decodedDiagnostics) > 100) {
+                app_flash('ログを読み取れませんでした。もう一度お試しください。');
+                app_redirect('/account');
+            }
+
+            $events = [];
+            foreach ($decodedDiagnostics as $event) {
+                if (!is_array($event)) continue;
+                $kind = preg_replace('/[^a-z0-9_-]/i', '', (string) ($event['kind'] ?? ''));
+                $at = (string) ($event['at'] ?? '');
+                $message = (string) ($event['message'] ?? '');
+                if ($kind === '' || $message === '') continue;
+                $message = preg_replace('#https?://[^\s)\'"<>]+#i', '[url]', $message) ?? '';
+                $message = preg_replace('/\bBearer\s+\S+/i', 'Bearer [redacted]', $message) ?? '';
+                $message = preg_replace('/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/', '[token]', $message) ?? '';
+                $message = preg_replace('/\b(?:access[_-]?token|refresh[_-]?token|authorization|cookie)\s*[:=]\s*\S+/i', '[credential]', $message) ?? '';
+                $message = preg_replace('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', '[email]', $message) ?? '';
+                $events[] = [
+                    'id' => substr((string) ($event['id'] ?? ''), 0, 64),
+                    'at' => preg_match('/^\d{4}-\d\d-\d\dT/', $at) === 1 ? substr($at, 0, 40) : null,
+                    'kind' => substr($kind, 0, 40),
+                    'message' => mb_substr($message, 0, 500),
+                ];
+                if (count($events) >= 100) break;
+            }
+            if ($events === []) {
+                app_flash('送信できるアプリログはありません。');
+                app_redirect('/account');
+            }
+
+            try {
+                $stmt = $db->prepare('INSERT INTO pwa_diagnostic_submissions (user_id, app_version, user_agent, events) VALUES (:user_id, :app_version, :user_agent, CAST(:events AS JSONB))');
+                $stmt->execute([
+                    'user_id' => (int) $user['id'],
+                    'app_version' => substr((string) ($_POST['app_version'] ?? ''), 0, 40),
+                    'user_agent' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),
+                    'events' => json_encode($events, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+                ]);
+                $db->exec("DELETE FROM pwa_diagnostic_submissions WHERE submitted_at < CURRENT_TIMESTAMP - INTERVAL '90 days'");
+                app_flash('アプリログを送信しました。調査に利用します。');
+                app_redirect('/account?diagnostics=sent');
+            } catch (Throwable $error) {
+                error_log('PWA diagnostic submission failed: ' . get_class($error));
+                app_flash('ログを送信できませんでした。通信を確認して再度お試しください。');
+                app_redirect('/account');
+            }
+        }
+
         $displayName = trim((string) ($_POST['display_name'] ?? ''));
         $avatarUrl = trim((string) ($user['avatar_url'] ?? ''));
         if (isset($_POST['use_default_avatar']) && $_POST['use_default_avatar'] === '1') {
@@ -909,6 +960,17 @@ function render_account(?PDO $db, string $method): void
       <div class="notice">メールアドレスや Google ID はゲスト画面には出ません。</div>
       <button class="button primary" type="submit">保存する</button>
     </form>
+    <section class="form-block" aria-labelledby="diagnostics-title">
+      <h2 id="diagnostics-title">アプリログ</h2>
+      <p class="muted">直近7日間のPWA起動、JavaScriptエラー、通信状態をこの端末に最大100件保存します。送信時に90日より前の送信記録を削除します。本文、写真、位置情報、Cookie、認証トークンは含めません。端末情報とアプリのバージョンは原因調査のため一緒に送信します。</p>
+      <form method="post" data-diagnostic-form>
+        <input type="hidden" name="_csrf" value="<?= $csrf ?>">
+        <input type="hidden" name="action" value="send_diagnostics">
+        <input type="hidden" name="app_version" value="<?= app_h(app_version()) ?>">
+        <input type="hidden" name="diagnostics_json" value="">
+        <button class="button" type="submit">アプリログを送信</button>
+      </form>
+    </section>
   </div>
 </section>
     <?php
