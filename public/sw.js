@@ -9,6 +9,8 @@ const APP_SHELL = [
   `/assets/apple-touch-icon-120.png?v=${APP_VERSION}`,
   `/assets/icon-192.png?v=${APP_VERSION}`,
   `/assets/icon-512.png?v=${APP_VERSION}`,
+  `/assets/pwa-icon-192-v${APP_VERSION}.png`,
+  `/assets/pwa-icon-512-v${APP_VERSION}.png`,
   `/assets/apple-touch-icon.png?v=${APP_VERSION}`,
   `/manifest.json?v=${APP_VERSION}`
 ];
