@@ -8,7 +8,7 @@ const APP_SHELL = [
   `/assets/icon-192.png?v=${APP_VERSION}`,
   `/assets/icon-512.png?v=${APP_VERSION}`,
   `/assets/apple-touch-icon.png?v=${APP_VERSION}`,
-  '/manifest.webmanifest'
+  `/manifest.json?v=${APP_VERSION}`
 ];
 const QR_PATH = /^\/share-events\/\d+\/qr$/;
 const QR_EXPIRY_HEADER = 'X-1G1A-QR-Expires-At';
@@ -133,7 +133,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.webmanifest') {
+  if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.json') {
     event.respondWith(
       caches.open(SHELL_CACHE)
         .then((cache) => cache.match(request))
