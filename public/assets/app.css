@@ -60,14 +60,11 @@ a:hover { text-decoration: underline; }
 }
 
 .brand-mark {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 42px;
   height: 42px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), #123d77);
-  color: #fff;
-  letter-spacing: 0.06em;
+  border-radius: 12px;
+  object-fit: cover;
 }
 
 .brand-text { font-size: 1rem; }
@@ -962,15 +959,11 @@ body.guest-skin-dashboard .launch-photo-button {
 }
 
 .guest-app-icon {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 30px;
   height: 30px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), #123d77);
-  color: #fff;
-  font-size: 0.72rem;
-  letter-spacing: 0.05em;
+  border-radius: 9px;
+  object-fit: cover;
 }
 
 .brand-menu-panel [hidden] {
@@ -1223,7 +1216,6 @@ body.guest-skin-dashboard .launch-photo-button {
     width: 34px;
     height: 34px;
     border-radius: 11px;
-    font-size: 0.82rem;
   }
   .brand-text {
     display: none;

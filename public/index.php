@@ -1927,7 +1927,7 @@ function render_guest_profile_screen_simple(array $event, string $guestName, arr
 </dialog>
 <footer class="guest-footer">
   <a class="guest-app-link" href="<?= app_h(app_url('/')) ?>">
-    <span class="guest-app-icon">1G1A</span>
+    <img class="guest-app-icon" src="<?= app_h(app_url('/assets/icon.svg?v=' . rawurlencode(app_version()))) ?>" alt="">
     <span>このアプリを見る</span>
   </a>
 </footer>
