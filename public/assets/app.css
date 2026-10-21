@@ -520,6 +520,7 @@ body.guest-skin-dashboard .launch-photo-button {
 .profile-preview-copy h2 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
 .profile-preview-headline { margin: 3px 0 0; font-weight: 700; }
 .profile-preview-bio { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; white-space: normal; overflow-wrap: anywhere; }
+.profile-preview-events { margin-top: 8px; justify-self: start; font-size: 0.88rem; }
 .profile-preview-edit { flex: 0 0 40px; color: var(--muted); text-decoration: none; }
 .profile-preview-edit:hover { color: var(--accent); border-color: rgba(15, 91, 102, 0.3); background: rgba(15, 91, 102, 0.06); }
 .profile-preview-edit:focus-visible { outline: 3px solid rgba(15, 91, 102, 0.24); outline-offset: 2px; }
