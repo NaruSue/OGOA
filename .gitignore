@@ -5,6 +5,7 @@
 deploy/.env
 docs.local/
 design.local/
+public/landing-preview/
 
 # PHP / Composer
 vendor/
