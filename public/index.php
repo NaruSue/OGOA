@@ -371,6 +371,9 @@ function render_home(): string
 
 function render_home_simple(): string
 {
+    $allGuestSkins = app_guest_skin_options();
+    $featuredSkinIds = ['cheers-after', 'travel-encounter', 'work-profiles'];
+    $featuredSkins = array_intersect_key($allGuestSkins, array_flip($featuredSkinIds));
     ob_start();
     ?>
 <div class="home-landing">
@@ -379,6 +382,7 @@ function render_home_simple(): string
     <nav aria-label="メインメニュー">
       <a href="#about">1G1Aとは</a>
       <a href="#how-it-works">使い方</a>
+      <a href="#examples">デザイン例</a>
       <a href="<?= app_h(app_url('/login')) ?>">ログイン</a>
       <a class="button primary" href="<?= app_h(app_url('/login')) ?>">無料で始める</a>
     </nav>
@@ -428,6 +432,28 @@ function render_home_simple(): string
           <p>あとで写真のQRを開けば、受け取ったプロフィールや共有内容を確認できます。</p>
         </article>
       </div>
+    </section>
+    <section class="landing-templates" id="examples">
+      <div class="landing-section-heading">
+        <p class="landing-eyebrow">PAGE DESIGNS</p>
+        <h2>QRを開いた先は、こんな画面です。</h2>
+        <p>共有プロフィールごとに、相手に見せるページの雰囲気を選べます。</p>
+      </div>
+      <div class="landing-template-grid">
+        <?php foreach ($featuredSkins as $skin): ?>
+          <article class="landing-template-card">
+            <div class="landing-template-preview">
+              <img src="<?= app_h($skin['preview']) ?>" alt="<?= app_h($skin['name']) ?>の共有ページデザイン例" loading="lazy">
+            </div>
+            <div class="landing-template-copy">
+              <span>共有ページのデザイン例</span>
+              <h3><?= app_h($skin['name']) ?></h3>
+              <p><?= app_h($skin['description']) ?></p>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+      <p class="landing-template-note">ここに掲載したのは一例です。プロフィール設定から、ほかのデザインも選べます。</p>
     </section>
     <section class="landing-bottom-cta">
       <div><p class="landing-eyebrow">MEET AND SHARE</p><h2>会った日の続きを、気軽に渡そう。</h2></div>
