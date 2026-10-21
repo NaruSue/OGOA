@@ -33,7 +33,7 @@ if ($path === '/' && $method === 'GET') {
     if ($db !== null && app_current_user($db) !== null) {
         app_redirect('/dashboard');
     }
-    app_render('Home', render_home_simple());
+    app_render('Home', render_home_simple(), ['chrome' => false]);
     exit;
 }
 
@@ -373,35 +373,68 @@ function render_home_simple(): string
 {
     ob_start();
     ?>
-<section class="hero">
-  <div class="hero-copy">
-    <p class="eyebrow">Meet and share</p>
-    <h1>出会った相手に、見せたいプロフィールをQRで共有。</h1>
-    <p class="lead">1G1Aは、会った相手にプロフィールや連絡先をあとから見てもらうための共有アプリです。場面に合わせたプロフィールを選んで、メッセージや写真と一緒にQRで渡せます。</p>
-    <div class="hero-actions">
-      <a class="button primary" href="<?= app_h(app_url('/login')) ?>">ログインして使う</a>
-    </div>
-  </div>
-  <div class="hero-card">
-    <div class="panel">
-      <h2>かんたんな使い方</h2>
-      <div class="step-accordion">
-        <details open>
-          <summary>1. 見せたいプロフィールを登録</summary>
-          <p>LINE、Instagram、X、メール、電話など、見せたい連絡先を登録します。プロフィールは複数作れるので、場面に合わせて分けられます。飲み仲間、仕事仲間、旅先用、秘密のうふふ用など。</p>
-        </details>
-        <details>
-          <summary>2. その場でQRを表示</summary>
-          <p>その場のノリに合わせて、見せたいプロフィールを選びます。必要ならメッセージや写真を追加して、QRを表示します。QRはあとからでも参照できます。</p>
-        </details>
-        <details>
-          <summary>3. 写真で撮ってもらう</summary>
-          <p>相手は今すぐページを開かなくても大丈夫です。この画面を写真で撮ってもらえば、あとからQRでアクセスできます。ネットが弱い場所でも使いやすい形です。</p>
-        </details>
+<div class="home-landing">
+  <header class="landing-nav">
+    <a class="landing-brand" href="<?= app_h(app_url('/')) ?>" aria-label="1G1A ホーム"><img src="<?= app_h(app_url('/assets/icon.svg?v=' . rawurlencode(app_version()))) ?>" alt=""><span>1G1A</span></a>
+    <nav aria-label="メインメニュー">
+      <a href="#about">1G1Aとは</a>
+      <a href="#how-it-works">使い方</a>
+      <a href="<?= app_h(app_url('/login')) ?>">ログイン</a>
+      <a class="button primary" href="<?= app_h(app_url('/login')) ?>">無料で始める</a>
+    </nav>
+  </header>
+  <main>
+    <section class="landing-hero" id="about">
+      <div class="landing-copy-block">
+        <p class="landing-eyebrow">写真・プロフィール・つながり方を、あとから渡す</p>
+        <h1>会った人に、<br>その日の続きを渡す。</h1>
+        <p class="landing-copy">1G1Aは、会った相手に写真やメッセージ、プロフィールをQRで共有するアプリです。見せたい内容を選んで渡せるので、連絡先交換を急がず、相手は好きなときに共有ページを開けます。</p>
+        <div class="landing-actions">
+          <a class="button primary" href="<?= app_h(app_url('/login')) ?>">無料で始める <span aria-hidden="true">→</span></a>
+          <a class="landing-secondary-link" href="#how-it-works">使い方を見る <span aria-hidden="true">↓</span></a>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
+      <div class="landing-story" aria-label="QR画面を見せ、写真に残してあとから開く場面">
+        <div class="landing-story-picture" role="img" aria-label="QR画面を挟んで向かい合う二人"></div>
+        <div class="landing-dialogue">
+          <p class="landing-dialogue-giver">今日渡したい写真やプロフィールをまとめたよ。</p>
+          <p class="landing-dialogue-guest">今は写真に撮って、あとからゆっくり見ればいいんだね。</p>
+        </div>
+      </div>
+    </section>
+    <section class="landing-how" id="how-it-works">
+      <div class="landing-section-heading">
+        <p class="landing-eyebrow">HOW IT WORKS</p>
+        <h2>その場で渡して、内容はあとから。</h2>
+        <p>受け取る人は、すぐに登録したり連絡先を交換したりしなくても大丈夫です。</p>
+      </div>
+      <div class="landing-steps">
+        <article class="landing-step">
+          <div class="landing-step-image step-show" role="img" aria-label="QR画面を見せる"></div>
+          <span class="landing-step-number">01</span>
+          <h3>見せたい内容を選ぶ</h3>
+          <p>相手や場面に合わせてプロフィールを選び、写真やメッセージを添えます。</p>
+        </article>
+        <article class="landing-step">
+          <div class="landing-step-image step-save" role="img" aria-label="QR画面を写真に撮る"></div>
+          <span class="landing-step-number">02</span>
+          <h3>QRを見せて渡す</h3>
+          <p>共有ページのQRを相手に見せます。その場で開かなくても、写真に残しておけます。</p>
+        </article>
+        <article class="landing-step">
+          <div class="landing-step-image step-open" role="img" aria-label="保存したQRから共有ページを開く"></div>
+          <span class="landing-step-number">03</span>
+          <h3>好きなときに開く</h3>
+          <p>あとで写真のQRを開けば、受け取ったプロフィールや共有内容を確認できます。</p>
+        </article>
+      </div>
+    </section>
+    <section class="landing-bottom-cta">
+      <div><p class="landing-eyebrow">MEET AND SHARE</p><h2>会った日の続きを、気軽に渡そう。</h2></div>
+      <a class="button primary" href="<?= app_h(app_url('/login')) ?>">1G1Aを使ってみる <span aria-hidden="true">→</span></a>
+    </section>
+  </main>
+</div>
     <?php
     return (string) ob_get_clean();
 }

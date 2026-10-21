@@ -4,6 +4,7 @@
 .env.*.local
 deploy/.env
 docs.local/
+design.local/
 
 # PHP / Composer
 vendor/
