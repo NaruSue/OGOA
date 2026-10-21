@@ -33,7 +33,9 @@ if ($path === '/' && $method === 'GET') {
     if ($db !== null && app_current_user($db) !== null) {
         app_redirect('/dashboard');
     }
-    app_render('Home', render_home_simple(), ['chrome' => false]);
+    $localHomeOverride = app_root('design.local/templates/landing-b/home.php');
+    $homeContent = is_file($localHomeOverride) ? require $localHomeOverride : render_home_simple();
+    app_render('Home', (string) $homeContent, ['chrome' => false]);
     exit;
 }
 
